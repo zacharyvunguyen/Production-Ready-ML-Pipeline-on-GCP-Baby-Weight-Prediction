@@ -34,7 +34,7 @@ aip.init(
     location=REGION,
     staging_bucket=GCS_BUCKET)
 
-ENDPOINT_NAME = 'projects/157478440416/locations/us-central1/endpoints/8601070445766115328'
+ENDPOINT_NAME = 'projects/69318036822/locations/us-central1/endpoints/4074389870305345536'
 
 endpoint = aip.Endpoint(
     project=PROJECT,
@@ -72,78 +72,53 @@ if (selected == 'Surgery Duration Prediction'):
     st.title('Surgery Duration Prediction')
     #col1, col2 = st.columns([1, 3])
     #with col1:
-    st.image('img/img.png', width=300)
+    st.image('img/img.png', width=200)
 
     # getting the input data from the user
     col1, col2, col3 = st.columns([1, 2, 2])
 
     #### VARIABLES
-    normalized_surgeon_specialty_name = pd.read_csv("data/normalized_surgeon_specialty_name.csv")
-    list_ss_name = normalized_surgeon_specialty_name[
-        'normalized_surgeon_specialty_name'].tolist()
+    #normalized_surgeon_specialty_name = pd.read_csv("data/normalized_surgeon_specialty_name.csv")
+    #list_ss_name = normalized_surgeon_specialty_name[
+    #    'normalized_surgeon_specialty_name'].tolist()
 
     ###**********INPUT VARIABLES*******************
     with col2:
-        normalized_surgeon_specialty_name = st.selectbox('Surgeon specialty name:(Ex: Orthopedic Surgery)',list_ss_name)
+        is_male = st.selectbox('Is the baby gender male?',['true','false'])
         #st.write('Surgeon specialty name is ', normalized_surgeon_specialty_name)
 
     with col2:
-        primary_procedure_code = st.text_input('Primary procedure code (Ex: 11042)')
+        mother_age = st.text_input('What is the age of the mother?')
         #st.write('Primary procedure code is ', primary_procedure_code)
 
     with col2:
-        diagnosis_1 = st.text_input('Diagnosis (Ex: T81.89XA)')
-        #st.write('Diagnosis is ', diagnosis_1)
-
-    with col2:
-        num_proc_codes = st.selectbox('Num Proc Codes',
-                                      ['1', '2', '3','4','5','6'])
+        plurality = st.selectbox('How many children were born as a result of this pregnancy?',
+                                      ['single(1)', 'Twins(2)', 'Triplets(3)','Quadruplets(4)'])
         #st.write('Num Proc Codes is ', num_proc_codes)
 
-    with col2:
-        hosp_health_ministry = st.selectbox('Hospital health ministry',['MIGRA','TNNAS'])
-        #st.write('Hospital health ministry is ', hosp_health_ministry)
+    with col3:
+        gestation_weeks = st.text_input('The number of weeks of the pregnancy:')
 
     with col3:
-        patient_type_group = st.selectbox('Patient type group',['OUTPATIENT','SAME DAY SURGERY',
-                                                                'INPATIENT','OBSERVATION'])
-        #st.write('Patient type group ', patient_type_group)
+        cigarette_use = st.selectbox('If the mother  mnjhsmoked cigarettes?',['true','false'])
 
     with col3:
-        num_diag_codes = st.selectbox('Diag code',
-                                      ['1', '2', '3','4','5','6','7','8','9','10','11','12','13','14',
-                                       '15'])
-        #st.write('Diag code ', num_diag_codes)
-
-    with col3:
-        patient_gender = st.radio('Patient gender (Ex: M)',['M','F','UNKNOWN'])
-        #st.write('Patient gender is ', patient_gender)
-
-    with col3:
-        patient_age_yrs_group = st.radio('Patient age group:', ['between_18_and_45_years_old',
-                                                                    'between_45_and_65_years_old',
-                                                                    'over_65_years_old'])
-        #st.write('Patient age group is ', patient_age_yrs_group)
-
+        alcohol_use = st.selectbox('If the mother drinked alcohol?',['true','false'])
 
 
     ########################INPUT DATA ARRAY#################
-    input_data = (normalized_surgeon_specialty_name,primary_procedure_code,
-                  num_proc_codes,hosp_health_ministry,patient_type_group,
-                  num_diag_codes,patient_gender,patient_age_yrs_group)
+    input_data = (is_male,mother_age,plurality,gestation_weeks,
+                  cigarette_use,alcohol_use)
     #with col1:
     #    st.caption(input_data)
 
     s = [
-        {'normalized_surgeon_specialty_name': normalized_surgeon_specialty_name,
-         'primary_procedure_code': primary_procedure_code,
-         'diagnosis_1': diagnosis_1,
-         'num_proc_codes': num_proc_codes,
-         'hosp_health_ministry': hosp_health_ministry,
-         'patient_type_group': patient_type_group,
-         'num_diag_codes': num_diag_codes,
-         'patient_gender': patient_gender,
-         'patient_age_yrs_group': patient_age_yrs_group,
+        {'is_male': is_male,
+         'mother_age': mother_age,
+         'plurality': plurality,
+         'gestation_weeks': gestation_weeks,
+         'cigarette_use': cigarette_use,
+         'alcohol_use': alcohol_use,
          },
     ]
 
@@ -152,7 +127,7 @@ if (selected == 'Surgery Duration Prediction'):
 
     # creating a button for Prediction
     with col1:
-        if st.button("Surgical time prediction"):
+        if st.button("Baby weight prediction"):
             predicted_value = endpoint.predict(s).predictions[0]['value']
             st.metric(label='Surgical Prediction Time', value=predicted_value)
             st.balloons()
