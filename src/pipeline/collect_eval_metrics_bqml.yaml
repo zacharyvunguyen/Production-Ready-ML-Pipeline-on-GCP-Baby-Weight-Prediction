@@ -1,0 +1,46 @@
+name: Collect eval metrics bqml
+inputs:
+- {name: eval_metrics_artifact, type: Artifact}
+outputs:
+- {name: metrics, type: Metrics}
+- {name: metrics_dict, type: JsonObject}
+implementation:
+  container:
+    image: python:3.9
+    command:
+    - sh
+    - -c
+    - |2
+
+      if ! [ -x "$(command -v pip)" ]; then
+          python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip
+      fi
+
+      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.16' && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp -d)
+      printf "%s" "$0" > "$program_path/ephemeral_component.py"
+      python3 -m kfp.v2.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+    - "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing\
+      \ import *\n\ndef collect_eval_metrics_bqml(\n    eval_metrics_artifact: Input[Artifact],\n\
+      \    metrics: Output[Metrics],\n) -> NamedTuple(\n    \"Outputs\",[\n      \
+      \  #(\"metrics\", Output[Metrics]),\n        (\"metrics_dict\", dict),],\n):\
+      \    \n\n    import math\n    from collections import namedtuple\n\n    metadata\
+      \ = eval_metrics_artifact.metadata\n    for r in metadata[\"rows\"]:\n     \
+      \   rows = r[\"f\"]\n        schema = metadata[\"schema\"][\"fields\"]\n   \
+      \     metrics_dict = {}\n        for metric, value in zip(schema, rows):\n \
+      \           metric_name = metric[\"name\"]\n            val = float(value[\"\
+      v\"])\n            metrics_dict[metric_name] = val\n            metrics.log_metric(metric_name,\
+      \ val)\n            if metric_name == \"mean_squared_error\":\n            \
+      \    rmse = math.sqrt(val)\n                metrics.log_metric(\"root_mean_squared_error\"\
+      , rmse)\n\n    metrics.log_metric(\"framework\", \"BQML\")\n\n    print(metrics_dict)\n\
+      \n    outputs = namedtuple(\"Outputs\", \n                         [#\"metrics\"\
+      , \n                          \"metrics_dict\"])\n\n    return outputs(\n  \
+      \      #metrics,\n        metrics_dict)\n\n"
+    args:
+    - --executor_input
+    - {executorInput: null}
+    - --function_to_execute
+    - collect_eval_metrics_bqml

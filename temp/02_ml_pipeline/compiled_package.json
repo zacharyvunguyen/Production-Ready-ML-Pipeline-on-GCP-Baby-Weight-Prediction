@@ -1,6 +1,128 @@
 {
   "pipelineSpec": {
     "components": {
+      "comp-bigquery-create-model-job": {
+        "executorLabel": "exec-bigquery-create-model-job",
+        "inputDefinitions": {
+          "parameters": {
+            "job_configuration_query": {
+              "type": "STRING"
+            },
+            "labels": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "query": {
+              "type": "STRING"
+            },
+            "query_parameters": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "model": {
+              "artifactType": {
+                "schemaTitle": "google.BQMLModel",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-bigquery-evaluate-model-job": {
+        "executorLabel": "exec-bigquery-evaluate-model-job",
+        "inputDefinitions": {
+          "artifacts": {
+            "model": {
+              "artifactType": {
+                "schemaTitle": "google.BQMLModel",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "job_configuration_query": {
+              "type": "STRING"
+            },
+            "labels": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "query_parameters": {
+              "type": "STRING"
+            },
+            "query_statement": {
+              "type": "STRING"
+            },
+            "table_name": {
+              "type": "STRING"
+            },
+            "threshold": {
+              "type": "DOUBLE"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "evaluation_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-collect-eval-metrics-bqml": {
+        "executorLabel": "exec-collect-eval-metrics-bqml",
+        "inputDefinitions": {
+          "artifacts": {
+            "eval_metrics_artifact": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "metrics_dict": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
       "comp-extract-source-data": {
         "executorLabel": "exec-extract-source-data",
         "inputDefinitions": {
@@ -94,6 +216,88 @@
     },
     "deploymentSpec": {
       "executors": {
+        "exec-bigquery-create-model-job": {
+          "container": {
+            "args": [
+              "--type",
+              "BigqueryCreateModelJob",
+              "--project",
+              "{{$.inputs.parameters['project']}}",
+              "--location",
+              "{{$.inputs.parameters['location']}}",
+              "--payload",
+              "{\"configuration\": {\"query\": {{$.inputs.parameters['job_configuration_query']}}, \"labels\": {{$.inputs.parameters['labels']}}}}",
+              "--job_configuration_query_override",
+              "{\"query\": \"{{$.inputs.parameters['query']}}\", \"query_parameters\": {{$.inputs.parameters['query_parameters']}}}",
+              "--gcp_resources",
+              "{{$.outputs.parameters['gcp_resources'].output_file}}",
+              "--executor_input",
+              "{{$}}"
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.v1.bigquery.create_model.launcher"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        },
+        "exec-bigquery-evaluate-model-job": {
+          "container": {
+            "args": [
+              "--type",
+              "BigqueryEvaluateModelJob",
+              "--project",
+              "{{$.inputs.parameters['project']}}",
+              "--location",
+              "{{$.inputs.parameters['location']}}",
+              "--model_name",
+              "{{$.inputs.artifacts['model'].metadata['projectId']}}.{{$.inputs.artifacts['model'].metadata['datasetId']}}.{{$.inputs.artifacts['model'].metadata['modelId']}}",
+              "--table_name",
+              "{{$.inputs.parameters['table_name']}}",
+              "--query_statement",
+              "{{$.inputs.parameters['query_statement']}}",
+              "--threshold",
+              "{{$.inputs.parameters['threshold']}}",
+              "--payload",
+              "{\"configuration\": {\"query\": {{$.inputs.parameters['job_configuration_query']}}, \"labels\": {{$.inputs.parameters['labels']}}}}",
+              "--job_configuration_query_override",
+              "{\"query_parameters\": {{$.inputs.parameters['query_parameters']}}, \"destination_encryption_configuration\": {\"kmsKeyName\": \"\"}}",
+              "--gcp_resources",
+              "{{$.outputs.parameters['gcp_resources'].output_file}}",
+              "--executor_input",
+              "{{$}}"
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.v1.bigquery.evaluate_model.launcher"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        },
+        "exec-collect-eval-metrics-bqml": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "collect_eval_metrics_bqml"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.16' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef collect_eval_metrics_bqml(\n    eval_metrics_artifact: Input[Artifact],\n    metrics: Output[Metrics],\n) -> NamedTuple(\n    \"Outputs\",[\n        #(\"metrics\", Output[Metrics]),\n        (\"metrics_dict\", dict),],\n):    \n\n    import math\n    from collections import namedtuple\n\n    metadata = eval_metrics_artifact.metadata\n    for r in metadata[\"rows\"]:\n        rows = r[\"f\"]\n        schema = metadata[\"schema\"][\"fields\"]\n        metrics_dict = {}\n        for metric, value in zip(schema, rows):\n            metric_name = metric[\"name\"]\n            val = float(value[\"v\"])\n            metrics_dict[metric_name] = val\n            metrics.log_metric(metric_name, val)\n            if metric_name == \"mean_squared_error\":\n                rmse = math.sqrt(val)\n                metrics.log_metric(\"root_mean_squared_error\", rmse)\n\n    metrics.log_metric(\"framework\", \"BQML\")\n\n    print(metrics_dict)\n\n    outputs = namedtuple(\"Outputs\", \n                         [#\"metrics\", \n                          \"metrics_dict\"])\n\n    return outputs(\n        #metrics,\n        metrics_dict)\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
         "exec-extract-source-data": {
           "container": {
             "args": [
@@ -171,7 +375,177 @@
     },
     "root": {
       "dag": {
+        "outputs": {
+          "artifacts": {
+            "collect-eval-metrics-bqml-metrics": {
+              "artifactSelectors": [
+                {
+                  "outputArtifactKey": "metrics",
+                  "producerSubtask": "collect-eval-metrics-bqml"
+                }
+              ]
+            }
+          }
+        },
         "tasks": {
+          "bigquery-create-model-job": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-bigquery-create-model-job"
+            },
+            "dependentTasks": [
+              "preprocess-data"
+            ],
+            "inputs": {
+              "parameters": {
+                "job_configuration_query": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "labels": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "US"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                },
+                "query": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "\n    CREATE MODEL IF NOT EXISTS `babyweight-prediction.bw_dataset.bqml_bw-prediction`\n    OPTIONS(\n        model_type = 'DNN_LINEAR_COMBINED_REGRESSOR',\n        model_registry = 'vertex_ai', \n        vertex_ai_model_version_aliases = ['bqml_bw-prediction'],\n        input_label_cols = ['weight_pounds'],\n        data_split_col = 'custom_splits',\n        data_split_method = 'CUSTOM',\n        HIDDEN_UNITS = [256, 128, 64],\n        OPTIMIZER = 'adagrad',\n        BATCH_SIZE = HPARAM_CANDIDATES([16, 32, 64]),\n        DROPOUT =  HPARAM_CANDIDATES([0, 0.1, 0.2]),\n        MAX_ITERATIONS = 5,\n        MAX_PARALLEL_TRIALS = 2,\n        NUM_TRIALS = 2\n        ) AS\n    SELECT * EXCEPT(splits),\n        CASE\n            WHEN splits = 'VALIDATE' THEN 'EVAL'\n            ELSE splits\n        END AS custom_splits\n    FROM `babyweight-prediction.bw_dataset.bw-prediction_extracted_2003_limit_20000`\n    "
+                    }
+                  }
+                },
+                "query_parameters": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "[]"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_bqml_model"
+            }
+          },
+          "bigquery-evaluate-model-job": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-bigquery-evaluate-model-job"
+            },
+            "dependentTasks": [
+              "bigquery-create-model-job"
+            ],
+            "inputs": {
+              "artifacts": {
+                "model": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "model",
+                    "producerTask": "bigquery-create-model-job"
+                  }
+                }
+              },
+              "parameters": {
+                "job_configuration_query": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "labels": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "[]"
+                    }
+                  }
+                },
+                "location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "US"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                },
+                "query_parameters": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "[]"
+                    }
+                  }
+                },
+                "query_statement": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": ""
+                    }
+                  }
+                },
+                "table_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": ""
+                    }
+                  }
+                },
+                "threshold": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "doubleValue": -1.0
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "evaluate_bqml_model"
+            }
+          },
+          "collect-eval-metrics-bqml": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-collect-eval-metrics-bqml"
+            },
+            "dependentTasks": [
+              "bigquery-evaluate-model-job"
+            ],
+            "inputs": {
+              "artifacts": {
+                "eval_metrics_artifact": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "evaluation_metrics",
+                    "producerTask": "bigquery-evaluate-model-job"
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "collect-eval-metrics-bqml"
+            }
+          },
           "extract-source-data": {
             "cachingOptions": {
               "enableCache": true
@@ -319,6 +693,16 @@
           },
           "service_account": {
             "type": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "collect-eval-metrics-bqml-metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            }
           }
         }
       }
