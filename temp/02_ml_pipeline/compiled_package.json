@@ -1,0 +1,343 @@
+{
+  "pipelineSpec": {
+    "components": {
+      "comp-extract-source-data": {
+        "executorLabel": "exec-extract-source-data",
+        "inputDefinitions": {
+          "parameters": {
+            "in_bq_table_id": {
+              "type": "STRING"
+            },
+            "out_bq_table_id": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "region": {
+              "type": "STRING"
+            },
+            "year": {
+              "type": "INT"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "out_bq_table_uri": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-preprocess-data": {
+        "executorLabel": "exec-preprocess-data",
+        "inputDefinitions": {
+          "parameters": {
+            "in_bq_table_id": {
+              "type": "STRING"
+            },
+            "limit": {
+              "type": "INT"
+            },
+            "out_bq_table_id": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "region": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "out_bq_table_uri": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-tabular-dataset-create": {
+        "executorLabel": "exec-tabular-dataset-create",
+        "inputDefinitions": {
+          "parameters": {
+            "bq_source": {
+              "type": "STRING"
+            },
+            "display_name": {
+              "type": "STRING"
+            },
+            "labels": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "dataset": {
+              "artifactType": {
+                "schemaTitle": "google.VertexDataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "deploymentSpec": {
+      "executors": {
+        "exec-extract-source-data": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "extract_source_data"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'bigquery' 'kfp==1.8.16' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef extract_source_data(\n    project: str,\n    region:str,\n    year: int,\n    in_bq_table_id: str, \n    out_bq_table_id: str,\n) -> NamedTuple(\n    \"Outputs\", [(\"out_bq_table_uri\", str)]\n):\n\n    from google.cloud import bigquery\n    from collections import namedtuple\n\n    bqclient = bigquery.Client(project=project)\n    query = f\"\"\"\n    CREATE OR REPLACE TABLE `{out_bq_table_id}` AS (\n    SELECT\n        weight_pounds,\n        is_male,\n        mother_age,\n        plurality,\n        gestation_weeks,\n        cigarette_use,\n        alcohol_use,\n        year, month, wday, state, mother_birth_state    \n    FROM\n        {in_bq_table_id}\n    WHERE\n        year > {year} \n        AND weight_pounds > 0\n        AND mother_age > 0\n        AND plurality > 0\n        AND gestation_weeks > 19     \n    )\n    \"\"\"\n\n    response = bqclient.query(query)\n    _ = response.result()   \n\n    # return output parameters\n    out_bq_table_uri = f\"bq://{out_bq_table_id}\"\n    outputs = namedtuple(\"Outputs\", [\"out_bq_table_uri\"])\n\n    return outputs(out_bq_table_uri)\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-preprocess-data": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "preprocess_data"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'bigquery' 'kfp==1.8.16' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef preprocess_data(\n    project: str,\n    region:str,\n    limit:int,\n    in_bq_table_id: str, \n    out_bq_table_id: str,\n) -> NamedTuple(\n    \"Outputs\", [(\"out_bq_table_uri\", str)]\n):\n\n    from google.cloud import bigquery\n    from collections import namedtuple\n\n    bqclient = bigquery.Client(project=project)\n    query = f\"\"\"\n    CREATE OR REPLACE TABLE `{out_bq_table_id}` AS (\n        WITH all_hash_limit AS (\n            SELECT\n                weight_pounds,\n                CAST(is_male AS STRING) AS is_male,\n                mother_age,\n                CASE\n                    WHEN plurality = 1 THEN \"Single(1)\"\n                    WHEN plurality = 2 THEN \"Twins(2)\"\n                    WHEN plurality = 3 THEN \"Triplets(3)\"\n                    WHEN plurality = 4 THEN \"Quadruplets(4)\"\n                    WHEN plurality = 5 THEN \"Quintuplets(5)\"\n                END AS plurality,\n                gestation_weeks,\n                IFNULL(CAST(cigarette_use AS STRING), \"Unknown\") AS cigarette_use,\n                IFNULL(CAST(alcohol_use AS STRING), \"Unknown\") AS alcohol_use,\n                ABS(FARM_FINGERPRINT(\n                    CONCAT(\n                        CAST(year AS STRING),\n                        CAST(month AS STRING),\n                        CAST(COALESCE(wday, 0)  AS STRING),\n                        CAST(IFNULL(state, \"Unknown\") AS STRING),\n                        CAST(IFNULL(mother_birth_state, \"Unknown\")  AS STRING)\n                    )\n                )) AS hash_values\n            FROM\n                `{in_bq_table_id}`\n            LIMIT {limit}\n        )\n        SELECT * EXCEPT(hash_values),\n            CASE \n                WHEN MOD(hash_values,10) < 8 THEN \"TRAIN\" \n                WHEN MOD(hash_values,10) < 9 THEN \"VALIDATE\"\n                ELSE \"TEST\"\n            END AS splits\n        FROM all_hash_limit\n    )\n    \"\"\"\n\n    response = bqclient.query(query)\n    _ = response.result()   \n\n    # return output parameters\n    out_bq_table_uri = f\"bq://{out_bq_table_id}\"\n    outputs = namedtuple(\"Outputs\", [\"out_bq_table_uri\"])\n\n    return outputs(out_bq_table_uri)\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-tabular-dataset-create": {
+          "container": {
+            "args": [
+              "--method.project",
+              "{{$.inputs.parameters['project']}}",
+              "--method.location",
+              "{{$.inputs.parameters['location']}}",
+              "--method.display_name",
+              "{{$.inputs.parameters['display_name']}}",
+              "--method.bq_source",
+              "{{$.inputs.parameters['bq_source']}}",
+              "--method.labels",
+              "{{$.inputs.parameters['labels']}}",
+              "--executor_input",
+              "{{$}}",
+              "--resource_name_output_artifact_uri",
+              "{{$.outputs.artifacts['dataset'].uri}}"
+            ],
+            "command": [
+              "python3",
+              "-m",
+              "google_cloud_pipeline_components.container.aiplatform.remote_runner",
+              "--cls_name",
+              "TabularDataset",
+              "--method_name",
+              "create"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        }
+      }
+    },
+    "pipelineInfo": {
+      "name": "bw-prediction"
+    },
+    "root": {
+      "dag": {
+        "tasks": {
+          "extract-source-data": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-extract-source-data"
+            },
+            "inputs": {
+              "parameters": {
+                "in_bq_table_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "bigquery-public-data.samples.natality"
+                    }
+                  }
+                },
+                "out_bq_table_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "babyweight-prediction.bw_dataset.bw-prediction_extracted_2003"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                },
+                "region": {
+                  "componentInputParameter": "region"
+                },
+                "year": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "intValue": "2003"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_extracted_table"
+            }
+          },
+          "preprocess-data": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-preprocess-data"
+            },
+            "dependentTasks": [
+              "extract-source-data"
+            ],
+            "inputs": {
+              "parameters": {
+                "in_bq_table_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "babyweight-prediction.bw_dataset.bw-prediction_extracted_2003"
+                    }
+                  }
+                },
+                "limit": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "intValue": "20000"
+                    }
+                  }
+                },
+                "out_bq_table_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "babyweight-prediction.bw_dataset.bw-prediction_extracted_2003_limit_20000"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                },
+                "region": {
+                  "componentInputParameter": "region"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_prepped_table"
+            }
+          },
+          "tabular-dataset-create": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-tabular-dataset-create"
+            },
+            "dependentTasks": [
+              "preprocess-data"
+            ],
+            "inputs": {
+              "parameters": {
+                "bq_source": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "out_bq_table_uri",
+                    "producerTask": "preprocess-data"
+                  }
+                },
+                "display_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "bw-prediction_extracted_2003_limit_20000_dataset"
+                    }
+                  }
+                },
+                "labels": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "us-central1"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_vertex_dataset"
+            }
+          }
+        }
+      },
+      "inputDefinitions": {
+        "parameters": {
+          "project": {
+            "type": "STRING"
+          },
+          "region": {
+            "type": "STRING"
+          },
+          "service_account": {
+            "type": "STRING"
+          }
+        }
+      }
+    },
+    "schemaVersion": "2.0.0",
+    "sdkVersion": "kfp-1.8.16"
+  },
+  "runtimeConfig": {
+    "gcsOutputDirectory": "gs://b_w_bucket/bw-prediction",
+    "parameters": {
+      "project": {
+        "stringValue": "babyweight-prediction"
+      },
+      "region": {
+        "stringValue": "us-west1"
+      },
+      "service_account": {
+        "stringValue": "69318036822-compute@developer.gserviceaccount.com"
+      }
+    }
+  }
+}
