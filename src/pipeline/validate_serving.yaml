@@ -1,0 +1,57 @@
+name: Validate serving
+inputs:
+- {name: endpoint, type: Artifact}
+outputs:
+- {name: instance, type: String}
+- {name: prediction, type: Float}
+implementation:
+  container:
+    image: python:3.9
+    command:
+    - sh
+    - -c
+    - |2
+
+      if ! [ -x "$(command -v pip)" ]; then
+          python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip
+      fi
+
+      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-aiplatform' 'kfp==1.8.16' && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp -d)
+      printf "%s" "$0" > "$program_path/ephemeral_component.py"
+      python3 -m kfp.v2.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+    - "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing\
+      \ import *\n\ndef validate_serving(\n    endpoint: Input[Artifact],\n) -> NamedTuple(\n\
+      \    \"Outputs\", [(\"instance\", str), (\"prediction\", float)]\n):\n    import\
+      \ logging\n    import json\n    from collections import namedtuple\n\n    from\
+      \ google.cloud import aiplatform\n    from google.protobuf import json_format\n\
+      \    from google.protobuf.struct_pb2 import Value\n\n    def treat_uri(uri):\n\
+      \        return uri[uri.find(\"projects/\") :]\n\n    def request_prediction(endp,\
+      \ instance):\n        instance = json_format.ParseDict(instance, Value())\n\
+      \        instances = [instance]\n        parameters_dict = {}\n        parameters\
+      \ = json_format.ParseDict(parameters_dict, Value())\n        response = endp.predict(instances=instances,\
+      \ parameters=parameters)\n        logging.info(\"deployed_model_id:\", response.deployed_model_id)\n\
+      \        logging.info(\"predictions: \", response.predictions)\n        # The\
+      \ predictions are a google.protobuf.Value representation of the model's predictions.\n\
+      \        predictions = response.predictions\n\n        for pred in predictions:\n\
+      \            if type(pred) is dict and \"value\" in pred.keys():\n         \
+      \       # AutoML predictions\n                prediction = pred[\"value\"]\n\
+      \            elif type(pred) is list:\n                # BQML predictions \n\
+      \                prediction = pred[0]\n            return prediction\n\n   \
+      \ endpoint_uri = endpoint.uri\n    treated_uri = treat_uri(endpoint_uri)\n\n\
+      \    instance = {\n        \"num_proc_codes\": 1.0,\n        \"patient_age_yrs\"\
+      : 18,\n        \"patient_bmi_group\": \"Normalweight\",\n        \"patient_type_group\"\
+      : \"OUTPATIENT\",\n        \"primary_procedure_code\": \"11772\",\n    }\n \
+      \   instance_json = json.dumps(instance)\n    logging.info(\"Will use the following\
+      \ instance: \" + instance_json)\n\n    endpoint = aiplatform.Endpoint(treated_uri)\n\
+      \    prediction = request_prediction(endpoint, instance)\n    result_tuple =\
+      \ namedtuple(\"Outputs\", [\"instance\", \"prediction\"])\n\n    return result_tuple(instance=str(instance_json),\
+      \ prediction=float(prediction))\n\n"
+    args:
+    - --executor_input
+    - {executorInput: null}
+    - --function_to_execute
+    - validate_serving

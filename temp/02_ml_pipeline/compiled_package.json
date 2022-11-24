@@ -217,6 +217,259 @@
           }
         }
       },
+      "comp-condition-deploy-automl-2": {
+        "dag": {
+          "tasks": {
+            "model-deploy": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-model-deploy"
+              },
+              "inputs": {
+                "artifacts": {
+                  "endpoint": {
+                    "componentInputArtifact": "pipelineparam--endpoint-create-endpoint"
+                  },
+                  "model": {
+                    "componentInputArtifact": "pipelineparam--automl-tabular-training-job-model"
+                  }
+                },
+                "parameters": {
+                  "automatic_resources_max_replica_count": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "automatic_resources_min_replica_count": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "dedicated_resources_accelerator_count": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "dedicated_resources_accelerator_type": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "dedicated_resources_machine_type": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "n1-highmem-4"
+                      }
+                    }
+                  },
+                  "dedicated_resources_max_replica_count": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "1"
+                      }
+                    }
+                  },
+                  "dedicated_resources_min_replica_count": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "1"
+                      }
+                    }
+                  },
+                  "deployed_model_display_name": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "disable_container_logging": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "enable_access_logging": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "explanation_metadata": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{}"
+                      }
+                    }
+                  },
+                  "explanation_parameters": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{}"
+                      }
+                    }
+                  },
+                  "service_account": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "traffic_split": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"0\": 100}"
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "deploy_model_to_endpoint"
+              }
+            }
+          }
+        },
+        "inputDefinitions": {
+          "artifacts": {
+            "pipelineparam--automl-tabular-training-job-model": {
+              "artifactType": {
+                "schemaTitle": "google.VertexModel",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "pipelineparam--endpoint-create-endpoint": {
+              "artifactType": {
+                "schemaTitle": "google.VertexEndpoint",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "pipelineparam--select-best-model-best_model_name": {
+              "type": "STRING"
+            },
+            "pipelineparam--select-best-model-deploy_decision": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-condition-deploy-decision-1": {
+        "dag": {
+          "tasks": {
+            "condition-deploy-automl-2": {
+              "componentRef": {
+                "name": "comp-condition-deploy-automl-2"
+              },
+              "inputs": {
+                "artifacts": {
+                  "pipelineparam--automl-tabular-training-job-model": {
+                    "componentInputArtifact": "pipelineparam--automl-tabular-training-job-model"
+                  },
+                  "pipelineparam--endpoint-create-endpoint": {
+                    "componentInputArtifact": "pipelineparam--endpoint-create-endpoint"
+                  }
+                },
+                "parameters": {
+                  "pipelineparam--select-best-model-best_model_name": {
+                    "componentInputParameter": "pipelineparam--select-best-model-best_model_name"
+                  },
+                  "pipelineparam--select-best-model-deploy_decision": {
+                    "componentInputParameter": "pipelineparam--select-best-model-deploy_decision"
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "condition-deploy-automl-2"
+              },
+              "triggerPolicy": {
+                "condition": "inputs.parameters['pipelineparam--select-best-model-best_model_name'].string_value == 'automl'"
+              }
+            }
+          }
+        },
+        "inputDefinitions": {
+          "artifacts": {
+            "pipelineparam--automl-tabular-training-job-model": {
+              "artifactType": {
+                "schemaTitle": "google.VertexModel",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "pipelineparam--endpoint-create-endpoint": {
+              "artifactType": {
+                "schemaTitle": "google.VertexEndpoint",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "pipelineparam--select-best-model-best_model_name": {
+              "type": "STRING"
+            },
+            "pipelineparam--select-best-model-deploy_decision": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-endpoint-create": {
+        "executorLabel": "exec-endpoint-create",
+        "inputDefinitions": {
+          "parameters": {
+            "description": {
+              "type": "STRING"
+            },
+            "display_name": {
+              "type": "STRING"
+            },
+            "encryption_spec_key_name": {
+              "type": "STRING"
+            },
+            "labels": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "network": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "endpoint": {
+              "artifactType": {
+                "schemaTitle": "google.VertexEndpoint",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
       "comp-extract-source-data": {
         "executorLabel": "exec-extract-source-data",
         "inputDefinitions": {
@@ -246,6 +499,76 @@
           }
         }
       },
+      "comp-model-deploy": {
+        "executorLabel": "exec-model-deploy",
+        "inputDefinitions": {
+          "artifacts": {
+            "endpoint": {
+              "artifactType": {
+                "schemaTitle": "google.VertexEndpoint",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "model": {
+              "artifactType": {
+                "schemaTitle": "google.VertexModel",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "automatic_resources_max_replica_count": {
+              "type": "INT"
+            },
+            "automatic_resources_min_replica_count": {
+              "type": "INT"
+            },
+            "dedicated_resources_accelerator_count": {
+              "type": "INT"
+            },
+            "dedicated_resources_accelerator_type": {
+              "type": "STRING"
+            },
+            "dedicated_resources_machine_type": {
+              "type": "STRING"
+            },
+            "dedicated_resources_max_replica_count": {
+              "type": "INT"
+            },
+            "dedicated_resources_min_replica_count": {
+              "type": "INT"
+            },
+            "deployed_model_display_name": {
+              "type": "STRING"
+            },
+            "disable_container_logging": {
+              "type": "STRING"
+            },
+            "enable_access_logging": {
+              "type": "STRING"
+            },
+            "explanation_metadata": {
+              "type": "STRING"
+            },
+            "explanation_parameters": {
+              "type": "STRING"
+            },
+            "service_account": {
+              "type": "STRING"
+            },
+            "traffic_split": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
       "comp-preprocess-data": {
         "executorLabel": "exec-preprocess-data",
         "inputDefinitions": {
@@ -270,6 +593,72 @@
         "outputDefinitions": {
           "parameters": {
             "out_bq_table_uri": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-select-best-model": {
+        "executorLabel": "exec-select-best-model",
+        "inputDefinitions": {
+          "artifacts": {
+            "automl_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "automl_model": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "bqml_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "bqml_model": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "reference_metric_name": {
+              "type": "STRING"
+            },
+            "thresholds_dict": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "best_model": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "best_model_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "best_metric": {
+              "type": "DOUBLE"
+            },
+            "best_model_name": {
+              "type": "STRING"
+            },
+            "deploy_decision": {
               "type": "STRING"
             }
           }
@@ -458,6 +847,31 @@
             "image": "python:3.9"
           }
         },
+        "exec-endpoint-create": {
+          "container": {
+            "args": [
+              "--type",
+              "CreateEndpoint",
+              "--payload",
+              "{\"display_name\": \"{{$.inputs.parameters['display_name']}}\", \"description\": \"{{$.inputs.parameters['description']}}\", \"labels\": {{$.inputs.parameters['labels']}}, \"encryption_spec\": {\"kms_key_name\":\"{{$.inputs.parameters['encryption_spec_key_name']}}\"}, \"network\": \"{{$.inputs.parameters['network']}}\"}",
+              "--project",
+              "{{$.inputs.parameters['project']}}",
+              "--location",
+              "{{$.inputs.parameters['location']}}",
+              "--gcp_resources",
+              "{{$.outputs.parameters['gcp_resources'].output_file}}",
+              "--executor_input",
+              "{{$}}"
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.v1.endpoint.create_endpoint.launcher"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        },
         "exec-extract-source-data": {
           "container": {
             "args": [
@@ -478,6 +892,29 @@
             "image": "python:3.9"
           }
         },
+        "exec-model-deploy": {
+          "container": {
+            "args": [
+              "--type",
+              "DeployModel",
+              "--payload",
+              "{\"endpoint\": \"{{$.inputs.artifacts['endpoint'].metadata['resourceName']}}\", \"traffic_split\": {{$.inputs.parameters['traffic_split']}}, \"deployed_model\": {\"model\": \"{{$.inputs.artifacts['model'].metadata['resourceName']}}\", \"dedicated_resources\": {\"machine_spec\": {\"machine_type\": \"{{$.inputs.parameters['dedicated_resources_machine_type']}}\", \"accelerator_type\": \"{{$.inputs.parameters['dedicated_resources_accelerator_type']}}\", \"accelerator_count\": {{$.inputs.parameters['dedicated_resources_accelerator_count']}}}, \"min_replica_count\": {{$.inputs.parameters['dedicated_resources_min_replica_count']}}, \"max_replica_count\": {{$.inputs.parameters['dedicated_resources_max_replica_count']}}}, \"automatic_resources\": {\"min_replica_count\": {{$.inputs.parameters['automatic_resources_min_replica_count']}}, \"max_replica_count\": {{$.inputs.parameters['automatic_resources_max_replica_count']}}}, \"service_account\": \"{{$.inputs.parameters['service_account']}}\", \"disable_container_logging\": {{$.inputs.parameters['disable_container_logging']}}, \"enable_access_logging\": {{$.inputs.parameters['enable_access_logging']}}, \"explanation_spec\": {\"parameters\": {{$.inputs.parameters['explanation_parameters']}}, \"metadata\": {{$.inputs.parameters['explanation_metadata']}}}}}",
+              "--project",
+              "",
+              "--location",
+              "",
+              "--gcp_resources",
+              "{{$.outputs.parameters['gcp_resources'].output_file}}"
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.v1.endpoint.deploy_model.launcher"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        },
         "exec-preprocess-data": {
           "container": {
             "args": [
@@ -494,6 +931,26 @@
               "-ec",
               "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
               "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef preprocess_data(\n    project: str,\n    region:str,\n    limit:int,\n    in_bq_table_id: str, \n    out_bq_table_id: str,\n) -> NamedTuple(\n    \"Outputs\", [(\"out_bq_table_uri\", str)]\n):\n\n    from google.cloud import bigquery\n    from collections import namedtuple\n\n    bqclient = bigquery.Client(project=project)\n    query = f\"\"\"\n    CREATE OR REPLACE TABLE `{out_bq_table_id}` AS (\n        WITH all_hash_limit AS (\n            SELECT\n                weight_pounds,\n                CAST(is_male AS STRING) AS is_male,\n                mother_age,\n                CASE\n                    WHEN plurality = 1 THEN \"Single(1)\"\n                    WHEN plurality = 2 THEN \"Twins(2)\"\n                    WHEN plurality = 3 THEN \"Triplets(3)\"\n                    WHEN plurality = 4 THEN \"Quadruplets(4)\"\n                    WHEN plurality = 5 THEN \"Quintuplets(5)\"\n                END AS plurality,\n                gestation_weeks,\n                IFNULL(CAST(cigarette_use AS STRING), \"Unknown\") AS cigarette_use,\n                IFNULL(CAST(alcohol_use AS STRING), \"Unknown\") AS alcohol_use,\n                ABS(FARM_FINGERPRINT(\n                    CONCAT(\n                        CAST(year AS STRING),\n                        CAST(month AS STRING),\n                        CAST(COALESCE(wday, 0)  AS STRING),\n                        CAST(IFNULL(state, \"Unknown\") AS STRING),\n                        CAST(IFNULL(mother_birth_state, \"Unknown\")  AS STRING)\n                    )\n                )) AS hash_values\n            FROM\n                `{in_bq_table_id}`\n            LIMIT {limit}\n        )\n        SELECT * EXCEPT(hash_values),\n            CASE \n                WHEN MOD(hash_values,10) < 8 THEN \"TRAIN\" \n                WHEN MOD(hash_values,10) < 9 THEN \"VALIDATE\"\n                ELSE \"TEST\"\n            END AS splits\n        FROM all_hash_limit\n    )\n    \"\"\"\n\n    response = bqclient.query(query)\n    _ = response.result()   \n\n    # return output parameters\n    out_bq_table_uri = f\"bq://{out_bq_table_id}\"\n    outputs = namedtuple(\"Outputs\", [\"out_bq_table_uri\"])\n\n    return outputs(out_bq_table_uri)\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-select-best-model": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "select_best_model"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.16' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef select_best_model(\n    automl_metrics: Input[Metrics],\n    automl_model: Input[Artifact],\n    bqml_metrics: Input[Metrics],\n    bqml_model: Input[Artifact],\n\n    #custom_model_metrics: Input[Metrics],\n    reference_metric_name: str,\n    thresholds_dict: dict,\n    best_model_metrics: Output[Metrics], \n    best_model: Output[Artifact],\n) -> NamedTuple(\n    \"Outputs\",[\n        (\"deploy_decision\", str),\n        (\"best_model_name\", str),\n        (\"best_metric\", float),\n    ],\n):\n    import logging\n    import json\n    from collections import namedtuple\n\n    # In cases where the models use different metrics\n    if reference_metric_name == \"mae\":\n        metric_possible_names = [\"meanAbsoluteError\", \"mean_absolute_error\",\"mae\"]\n    elif reference_metric_name == \"mse\":\n        metric_possible_names = [\"MeanSquaredError\", \"mean_squared_error\", \"mse\"]\n\n    logging.info(f\"automl_metrics.metadata: {automl_metrics.metadata}\")\n    logging.info(f\"bqml_metrics.metadata: {bqml_metrics.metadata}\")\n    #logging.info(f\"custom_model_metrics.metadata: {custom_model_metrics.metadata}\")\n\n    for metric_name in metric_possible_names:     \n        try:\n            automl_metric = automl_metrics.metadata[metric_name]\n            logging.info(f\"automl_metric: {automl_metrics}\")\n        except:\n            logging.info(f\"{metric_name} does not exist in the AutoML Model dictionary\")\n\n        try:\n            bqml_metric = bqml_metrics.metadata[metric_name]\n            logging.info(f\"bqml_metric: {bqml_metric}\")\n        except:\n            logging.info(f\"{metric_name} does not exist in the BQML dictionary\")\n\n        #try:\n        #    custom_model_metric = custom_model_metrics.metadata[metric_name]\n        #    logging.info(f\"custom_model_metric: {custom_model_metric}\")\n        #except:\n        #    logging.info(f\"{metric_name} does not exist in the Custom Model dictionary\")\n\n    # Find the best model (i.e. with the smallest RMSE)\n    if bqml_metric <= automl_metric:\n        best_model_name = \"bqml\"\n        best_model = bqml_model\n        best_metric = bqml_metric\n        best_model_metrics.metadata = bqml_metrics.metadata\n    else:\n        best_model_name = \"automl\"\n        best_model = automl_model\n        best_metric = automl_metric\n        best_model_metrics.metadata = automl_metrics.metadata\n\n    # Determine if the best model meets the threshold\n    if best_metric < thresholds_dict[reference_metric_name]:\n        deploy_decision = \"true\"\n    else:\n        deploy_decision = \"false\"\n\n    logging.info(f\"Which model is best? {best_model_name}\")\n    logging.info(f\"What metric is being used? {reference_metric_name}\")\n    logging.info(f\"What is the best metric? {best_metric}\")\n    logging.info(f\"What is the threshold to deploy? {thresholds_dict}\")\n    logging.info(f\"Deploy decision: {deploy_decision}\")\n\n    outputs = namedtuple(\n        \"Outputs\", [\"deploy_decision\", \"best_model_name\", \"best_metric\",]\n    )\n\n    return outputs(deploy_decision, best_model_name, best_metric)\n\n"
             ],
             "image": "python:3.9"
           }
@@ -550,6 +1007,14 @@
                 {
                   "outputArtifactKey": "metrics",
                   "producerSubtask": "collect-eval-metrics-bqml"
+                }
+              ]
+            },
+            "select-best-model-best_model_metrics": {
+              "artifactSelectors": [
+                {
+                  "outputArtifactKey": "best_model_metrics",
+                  "producerSubtask": "select-best-model"
                 }
               ]
             }
@@ -853,6 +1318,112 @@
               "name": "collect-eval-metrics-bqml"
             }
           },
+          "condition-deploy-decision-1": {
+            "componentRef": {
+              "name": "comp-condition-deploy-decision-1"
+            },
+            "dependentTasks": [
+              "automl-tabular-training-job",
+              "endpoint-create",
+              "select-best-model"
+            ],
+            "inputs": {
+              "artifacts": {
+                "pipelineparam--automl-tabular-training-job-model": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "model",
+                    "producerTask": "automl-tabular-training-job"
+                  }
+                },
+                "pipelineparam--endpoint-create-endpoint": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "endpoint",
+                    "producerTask": "endpoint-create"
+                  }
+                }
+              },
+              "parameters": {
+                "pipelineparam--select-best-model-best_model_name": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "best_model_name",
+                    "producerTask": "select-best-model"
+                  }
+                },
+                "pipelineparam--select-best-model-deploy_decision": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "deploy_decision",
+                    "producerTask": "select-best-model"
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "condition-deploy-decision-1"
+            },
+            "triggerPolicy": {
+              "condition": "inputs.parameters['pipelineparam--select-best-model-deploy_decision'].string_value == 'true'"
+            }
+          },
+          "endpoint-create": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-endpoint-create"
+            },
+            "inputs": {
+              "parameters": {
+                "description": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": ""
+                    }
+                  }
+                },
+                "display_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "bw-prediction_endpoint"
+                    }
+                  }
+                },
+                "encryption_spec_key_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": ""
+                    }
+                  }
+                },
+                "labels": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "us-central1"
+                    }
+                  }
+                },
+                "network": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": ""
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_endpoint"
+            }
+          },
           "extract-source-data": {
             "cachingOptions": {
               "enableCache": true
@@ -940,6 +1511,67 @@
               "name": "create_prepped_table"
             }
           },
+          "select-best-model": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-select-best-model"
+            },
+            "dependentTasks": [
+              "automl-tabular-training-job",
+              "bigquery-create-model-job",
+              "collect-eval-metrics-automl",
+              "collect-eval-metrics-bqml"
+            ],
+            "inputs": {
+              "artifacts": {
+                "automl_metrics": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "metrics",
+                    "producerTask": "collect-eval-metrics-automl"
+                  }
+                },
+                "automl_model": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "model",
+                    "producerTask": "automl-tabular-training-job"
+                  }
+                },
+                "bqml_metrics": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "metrics",
+                    "producerTask": "collect-eval-metrics-bqml"
+                  }
+                },
+                "bqml_model": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "model",
+                    "producerTask": "bigquery-create-model-job"
+                  }
+                }
+              },
+              "parameters": {
+                "reference_metric_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "mae"
+                    }
+                  }
+                },
+                "thresholds_dict": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{\"mae\": 50.0}"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "select-best-model"
+            }
+          },
           "tabular-dataset-create": {
             "cachingOptions": {
               "enableCache": true
@@ -1012,6 +1644,12 @@
             }
           },
           "collect-eval-metrics-bqml-metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "select-best-model-best_model_metrics": {
             "artifactType": {
               "schemaTitle": "system.Metrics",
               "schemaVersion": "0.0.1"
