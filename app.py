@@ -88,7 +88,8 @@ if (selected == 'Surgery Duration Prediction'):
         #st.write('Surgeon specialty name is ', normalized_surgeon_specialty_name)
 
     with col2:
-        mother_age = st.text_input('What is the age of the mother?')
+        #mother_age = st.text_input('What is the age of the mother?')
+        mother_age = st.slider('What is the age of the mother?', 10, 100, 25)
         #st.write('Primary procedure code is ', primary_procedure_code)
 
     with col2:
@@ -97,7 +98,8 @@ if (selected == 'Surgery Duration Prediction'):
         #st.write('Num Proc Codes is ', num_proc_codes)
 
     with col3:
-        gestation_weeks = st.text_input('The number of weeks of the pregnancy:')
+        #gestation_weeks = st.text_input('The number of weeks of the pregnancy:')
+        gestation_weeks = st.slider('The number of weeks of the pregnancy:', 10, 50, 37)
 
     with col3:
         cigarette_use = st.selectbox('If the mother  mnjhsmoked cigarettes?',['true','false'])
@@ -114,9 +116,9 @@ if (selected == 'Surgery Duration Prediction'):
 
     s = [
         {'is_male': is_male,
-         'mother_age': mother_age,
+         'mother_age': str(mother_age),
          'plurality': plurality,
-         'gestation_weeks': gestation_weeks,
+         'gestation_weeks': str(gestation_weeks),
          'cigarette_use': cigarette_use,
          'alcohol_use': alcohol_use,
          },
