@@ -52,8 +52,8 @@ with st.sidebar:
     plurality = st.selectbox('How many children were born as a result of this pregnancy?',
                              ['single(1)', 'Twins(2)', 'Triplets(3)','Quadruplets(4)'])
     gestation_weeks = st.slider('The number of weeks of the pregnancy:', 10, 50, 37)
-    cigarette_use = st.selectbox('Maternal smoking status:',['Smoking','No Smoking'])
-    alcohol_use = st.selectbox('Maternal drinking status:',['Drinking','No Drinking'])
+    cigarette_use = st.selectbox('Maternal smoking status:',['Yes','No'])
+    alcohol_use = st.selectbox('Maternal drinking status:',['Yes','No'])
 
 col1, col2, col3, col4, col5, col6 = st.columns(6)
 
@@ -62,7 +62,7 @@ col2.metric("Mother Age", mother_age)
 col3.metric("Plurality", plurality.upper())
 col4.metric("Gestation Week Number", gestation_weeks)
 col5.metric("Maternal smoking status", cigarette_use.upper())
-col6.metric("Gender", alcohol_use.upper())
+col6.metric("Maternal drinking status", alcohol_use.upper())
 
 
 
@@ -72,12 +72,12 @@ if is_male =='Boy':
 else:
     is_male = 'false'
 
-if cigarette_use =='Smoking':
+if cigarette_use =='Yes':
     is_male = 'true'
 else:
     is_male = 'false'
 
-if alcohol_use =='Drinking':
+if alcohol_use =='Yes':
     is_male = 'true'
 else:
     is_male = 'false'
