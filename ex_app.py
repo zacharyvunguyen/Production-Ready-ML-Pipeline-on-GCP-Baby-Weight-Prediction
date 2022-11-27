@@ -47,13 +47,13 @@ st.set_page_config(
 with st.sidebar:
     st.title('Baby Weight Prediction')
     #Input:
-    is_male = st.selectbox('What is the gender of the baby?',['Boy','Girl'])
+    is_male = st.radio('What is the gender of the baby?',['Boy','Girl'])
     mother_age = st.slider('What is the age of the mother?', 10, 100, 25)
-    plurality = st.selectbox('How many children were born as a result of this pregnancy?',
-                             ['single(1)', 'Twins(2)', 'Triplets(3)','Quadruplets(4)'])
     gestation_weeks = st.slider('The number of weeks of the pregnancy:', 10, 50, 37)
-    cigarette_use = st.selectbox('Maternal smoking status:',['Yes','No'])
-    alcohol_use = st.selectbox('Maternal drinking status:',['Yes','No'])
+    cigarette_use = st.radio('Maternal smoking status:',['Yes','No'])
+    alcohol_use = st.radio('Maternal drinking status:',['Yes','No'])
+    plurality = st.selectbox('How many children were born as a result of this pregnancy?',
+                             ['single(1)', 'Twins(2)', 'Triplets(3)', 'Quadruplets(4)'])
 
 
 #col1, col2, col3, col4, col5, col6 = st.columns(6)
