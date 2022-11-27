@@ -45,7 +45,7 @@ st.set_page_config(
 
 #*************SIDEBAR*************#
 with st.sidebar:
-    st.title('Surgery Duration Prediction')
+    st.title('Baby Weight Prediction')
     #Input:
     is_male = st.selectbox('What is the gender of the baby?',['Boy','Girl'])
     mother_age = st.slider('What is the age of the mother?', 10, 100, 25)
@@ -54,17 +54,6 @@ with st.sidebar:
     gestation_weeks = st.slider('The number of weeks of the pregnancy:', 10, 50, 37)
     cigarette_use = st.selectbox('Maternal smoking status:',['Yes','No'])
     alcohol_use = st.selectbox('Maternal drinking status:',['Yes','No'])
-
-col1, col2, col3, col4, col5, col6 = st.columns(6)
-
-col1.metric("Baby Gender", is_male.upper())
-col2.metric("Mother Age", mother_age)
-col3.metric("Plurality", plurality.upper())
-col4.metric("Gestation Week Number", gestation_weeks)
-col5.metric("Maternal smoking status", cigarette_use.upper())
-col6.metric("Maternal drinking status", alcohol_use.upper())
-
-
 
 #*************GENERATE INPUT*************#
 if is_male =='Boy':
@@ -94,23 +83,117 @@ instance = [
 #*************GENERATE RESULT*************#
 predicted_value = ''
 
-with st.sidebar:
-    if st.button("Baby weight prediction"):
-        predicted_value = round(endpoint.predict(instance).predictions[0]['value'],2)
-        st.balloons()
-
-st.metric(label='Surgical Prediction Time', value=f"{predicted_value} LB")
 
 #*************EXPLAINATION RESULT*************#
-col1, col2 = st.columns(2)
-with col1:
-    chart_data = pd.DataFrame(
-        np.random.randn(20, 3),
-        columns=["a", "b", "c"])
-    st.area_chart(chart_data)
+explain=endpoint.explain(instance)
 
-with col2:
-    chart_data = pd.DataFrame(
-        np.random.randn(20, 3),
-        columns=["a", "b", "c"])
-    st.area_chart(chart_data)
+FEATURE_COLUMNS = [
+    'is_male',
+    'mother_age',
+    'plurality',
+    'gestation_weeks',
+    'cigarette_use',
+    'alcohol_use'
+]
+
+#************************FUNCTION**********************
+def get_feature_attributions(
+        prediction_expl, instance_index, feature_columns=FEATURE_COLUMNS):
+    """Returns the feature attributions with the baseline for a prediction example"""
+
+    rows = []
+    attribution = prediction_expl.explanations[instance_index].attributions[0]
+    baseline_score = attribution.baseline_output_value
+    total_att_val = baseline_score
+    for key in feature_columns:
+        feature_val = instance[instance_index][key]
+        att_val = attribution.feature_attributions[key]
+        total_att_val += att_val
+        rows.append([key,feature_val,att_val])
+
+    feature_attributions_rows = sorted(rows, key=lambda row: row[2], reverse=True)
+    feature_attributions_rows.insert(0,["Baseline_Score", "--", baseline_score])
+    feature_attributions_rows.append(["Final_Prediction", "--", total_att_val])
+
+
+    return feature_attributions_rows
+
+feature_attributions_rows = get_feature_attributions(explain, 0)
+
+def generate_dataframe():
+    feature_list=[]
+    feature_values=[]
+    feature_contributions=[]
+    feature_attributions_rows = get_feature_attributions(explain, 0)
+
+    for i in range(len(feature_attributions_rows)):
+        feature=feature_attributions_rows[i][0]
+        feature_list.append(feature)
+
+    for i in range(len(feature_attributions_rows)):
+        feature=feature_attributions_rows[i][1]
+        feature_values.append(feature)
+
+    for i in range(len(feature_attributions_rows)):
+        feature=feature_attributions_rows[i][2]
+        feature_contributions.append(feature)
+
+    zipped = list(zip(feature_list, feature_values, feature_contributions))
+    df = pd.DataFrame(zipped, columns=['Feature', 'Value', 'Contribution'])
+
+    return df, feature_list, feature_values,feature_contributions
+
+df, feature_list, feature_values,feature_contributions=generate_dataframe()
+
+###############
+import plotly
+import plotly.graph_objects as go
+import plotly.express as px
+import matplotlib.pyplot as plt
+import seaborn as sns
+import time
+##############
+
+#with st.sidebar:
+#    if st.button("Baby weight prediction"):
+#Display the Prediction in LBs
+col1, col2, col3, col4, col5, col6 = st.columns(6)
+
+col1.metric("Baby Gender", is_male.upper())
+col1.metric("Mother Age", mother_age)
+col2.metric("Plurality", plurality.upper())
+col2.metric("Gestation Week Number", gestation_weeks)
+col3.metric("Maternal smoking status", cigarette_use.upper())
+col3.metric("Maternal drinking status", alcohol_use.upper())
+predicted_value = round(endpoint.predict(instance).predictions[0]['value'],2)
+with st.spinner('Generating Result...'):
+    time.sleep(1)
+col5.metric(label='Baby Weight Prediction', value=f"{predicted_value} LB")
+
+#layout
+df["Color"] = np.where(df["Contribution"]<0, 'Negative Contribution', 'Positive Contribution')
+
+#water fall horizontall
+import plotly.graph_objects as go
+fig = go.Figure(go.Waterfall(
+    orientation = "h",
+    measure = ["relative", "relative", "relative", "relative",  "relative", "relative", "relative", "total"],
+    y = feature_list,
+    x = feature_contributions,
+    connector = {"mode":"between", "line":{"width":4, "color":"rgb(0, 0, 0)", "dash":"solid"}}
+))
+st.plotly_chart(fig,use_container_width=True)
+
+
+#####
+df2=df.query("Feature in ('Baseline_Score','Final_Prediction')")
+#st.table(df2)
+fig=px.bar(df2,x='Contribution',y='Feature',color='Feature')
+st.plotly_chart(fig,use_container_width=True)
+
+fig=px.bar(df,x='Contribution',y='Feature',color='Color',category_orders=df['Feature'])
+st.plotly_chart(fig,use_container_width=True)
+
+st.table(df)
+
+
