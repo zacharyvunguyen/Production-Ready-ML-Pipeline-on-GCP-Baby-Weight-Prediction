@@ -186,7 +186,8 @@ df3=df3.set_index('Feature')
 #st.dataframe(df)
 #st.dataframe(df3)
 
-col1, col2, col3, col4, col5, col6 = st.columns(6)
+col1, col2, col3, col4, col5 = st.columns(5)
+st.columns([1, 1, 3,1,1])
 
 col1.metric("Baby Gender", is_male.upper(),df3.loc['is_male', 'Contribution'])
 col1.metric("Mother Age", mother_age,df3.loc['mother_age', 'Contribution'])
