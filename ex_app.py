@@ -55,6 +55,16 @@ with st.sidebar:
     cigarette_use = st.selectbox('Maternal smoking status:',['Yes','No'])
     alcohol_use = st.selectbox('Maternal drinking status:',['Yes','No'])
 
+
+#col1, col2, col3, col4, col5, col6 = st.columns(6)
+#
+#col1.metric("Baby Gender", is_male.upper())
+#col1.metric("Mother Age", mother_age)
+#col2.metric("Plurality", plurality.upper())
+#col2.metric("Gestation Week Number", gestation_weeks)
+#col3.metric("Maternal smoking status", cigarette_use.upper())
+#col3.metric("Maternal drinking status", alcohol_use.upper())
+
 #*************GENERATE INPUT*************#
 if is_male =='Boy':
     is_male = 'true'
@@ -62,14 +72,14 @@ else:
     is_male = 'false'
 
 if cigarette_use =='Yes':
-    is_male = 'true'
+    cigarette_use = 'true'
 else:
-    is_male = 'false'
+    cigarette_use = 'false'
 
 if alcohol_use =='Yes':
-    is_male = 'true'
+    alcohol_use = 'true'
 else:
-    is_male = 'false'
+    alcohol_use = 'false'
 
 instance = [
     {'is_male': is_male,
@@ -80,9 +90,10 @@ instance = [
      'alcohol_use': alcohol_use,
      },
 ]
+
+#st.write(instance)
 #*************GENERATE RESULT*************#
 predicted_value = ''
-
 
 #*************EXPLAINATION RESULT*************#
 explain=endpoint.explain(instance)
@@ -154,17 +165,39 @@ import seaborn as sns
 import time
 ##############
 
+if is_male =='true':
+    is_male = 'Boy'
+else:
+    is_male = 'Girl'
+
+if cigarette_use =='true':
+    cigarette_use = 'Smoking'
+else:
+    cigarette_use = 'No Smoking'
+
+if alcohol_use =='true':
+    alcohol_use = 'Drinking'
+else:
+    alcohol_use = 'No Drinking'
+#st.write(instance)
+#copy df
+df3=df.copy()
+df3=df3.set_index('Feature')
+#st.dataframe(df)
+#st.dataframe(df3)
+
+col1, col2, col3, col4, col5, col6 = st.columns(6)
+
+col1.metric("Baby Gender", is_male.upper(),df3.loc['is_male', 'Contribution'])
+col1.metric("Mother Age", mother_age,df3.loc['mother_age', 'Contribution'])
+col2.metric("Plurality", plurality.upper(),df3.loc['plurality', 'Contribution'])
+col2.metric("Gestation Week Number", gestation_weeks,df3.loc['gestation_weeks', 'Contribution'])
+col3.metric("Maternal smoking status", cigarette_use.upper(),df3.loc['cigarette_use', 'Contribution'])
+col3.metric("Maternal drinking status", alcohol_use.upper(),df3.loc['alcohol_use', 'Contribution'])
+
 #with st.sidebar:
 #    if st.button("Baby weight prediction"):
 #Display the Prediction in LBs
-col1, col2, col3, col4, col5, col6 = st.columns(6)
-
-col1.metric("Baby Gender", is_male.upper())
-col1.metric("Mother Age", mother_age)
-col2.metric("Plurality", plurality.upper())
-col2.metric("Gestation Week Number", gestation_weeks)
-col3.metric("Maternal smoking status", cigarette_use.upper())
-col3.metric("Maternal drinking status", alcohol_use.upper())
 predicted_value = round(endpoint.predict(instance).predictions[0]['value'],2)
 with st.spinner('Generating Result...'):
     time.sleep(1)
@@ -182,7 +215,10 @@ fig = go.Figure(go.Waterfall(
     x = feature_contributions,
     connector = {"mode":"between", "line":{"width":4, "color":"rgb(0, 0, 0)", "dash":"solid"}}
 ))
+st.subheader('Feature Importance')
 st.plotly_chart(fig,use_container_width=True)
+#########
+
 
 
 #####
@@ -194,6 +230,6 @@ st.plotly_chart(fig,use_container_width=True)
 fig=px.bar(df,x='Contribution',y='Feature',color='Color',category_orders=df['Feature'])
 st.plotly_chart(fig,use_container_width=True)
 
-st.table(df)
+
 
 
