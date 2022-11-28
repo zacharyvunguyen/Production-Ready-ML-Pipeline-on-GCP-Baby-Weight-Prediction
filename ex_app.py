@@ -62,8 +62,8 @@ with st.sidebar:
     is_male = st.radio('What is the gender of the baby?', ['Boy', 'Girl'])
     mother_age = st.slider('What is the age of the mother?', 10, 100, 20)
     gestation_weeks = st.slider('The number of weeks of the pregnancy:', 10, 50, 39)
-    cigarette_use = st.radio('Maternal smoking status:', ['Yes', 'No','Unknown'])
-    alcohol_use = st.radio('Maternal drinking status:', ['Yes', 'No','Unknown'])
+    cigarette_use = st.radio('Maternal smoking status:', ['Unknown','Yes', 'No'])
+    alcohol_use = st.radio('Maternal drinking status:', ['Unknown','Yes', 'No'])
     plurality = st.selectbox('How many children were born as a result of this pregnancy?',
                              ['single(1)', 'Twins(2)', 'Triplets(3)', 'Quadruplets(4)'])
 
@@ -84,11 +84,15 @@ else:
 
 if cigarette_use == 'Yes':
     cigarette_use = 'true'
+elif cigarette_use == 'Unknown':
+    cigarette_use = 'Unknown'
 else:
     cigarette_use = 'false'
 
 if alcohol_use == 'Yes':
     alcohol_use = 'true'
+elif alcohol_use == 'Unknown':
+    alcohol_use = 'Unknown'
 else:
     alcohol_use = 'false'
 
@@ -187,11 +191,15 @@ else:
 
 if cigarette_use == 'true':
     cigarette_use = 'Smoking'
+elif cigarette_use == 'Unknown':
+    cigarette_use = 'Unknown'
 else:
     cigarette_use = 'No Smoking'
 
 if alcohol_use == 'true':
     alcohol_use = 'Drinking'
+elif alcohol_use == 'Unknown':
+    alcohol_use = 'Unknown'
 else:
     alcohol_use = 'No Drinking'
 # st.write(instance)
