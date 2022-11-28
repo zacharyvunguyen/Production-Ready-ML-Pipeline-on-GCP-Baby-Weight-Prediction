@@ -24,8 +24,13 @@ def create_query_build_bqml_model(
         BATCH_SIZE = HPARAM_CANDIDATES([16, 32, 64]),
         DROPOUT =  HPARAM_CANDIDATES([0, 0.1, 0.2]),
         MAX_ITERATIONS = 5,
+<<<<<<< HEAD
+        MAX_PARALLEL_TRIALS = 5,
+        NUM_TRIALS = 20
+=======
         MAX_PARALLEL_TRIALS = 4,
         NUM_TRIALS = 24
+>>>>>>> 320c95d20dbe84b70bcd7e5332c73d9e66777e74
         ) AS
     SELECT * EXCEPT(splits),
         CASE

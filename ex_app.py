@@ -8,6 +8,14 @@ from google.cloud import bigquery
 import pandas as pd
 import streamlit as st
 
+import plotly
+import plotly.graph_objects as go
+import plotly.express as px
+import matplotlib.pyplot as plt
+import seaborn as sns
+import time
+import plotly.graph_objects as go
+
 ####################
 NOTEBOOK = 'Vertex_AI_Streamlit'
 REGION = "us-central1"
@@ -67,16 +75,8 @@ with st.sidebar:
     plurality = st.selectbox('How many children were born as a result of this pregnancy?',
                              ['single(1)', 'Twins(2)', 'Triplets(3)', 'Quadruplets(4)'])
 
-# col1, col2, col3, col4, col5, col6 = st.columns(6)
-#
-# col1.metric("Baby Gender", is_male.upper())
-# col1.metric("Mother Age", mother_age)
-# col2.metric("Plurality", plurality.upper())
-# col2.metric("Gestation Week Number", gestation_weeks)
-# col3.metric("Maternal smoking status", cigarette_use.upper())
-# col3.metric("Maternal drinking status", alcohol_use.upper())
-
 # *************GENERATE INPUT*************#
+
 if is_male == 'Boy':
     is_male = 'true'
 else:
@@ -144,9 +144,7 @@ def get_feature_attributions(
 
     return feature_attributions_rows
 
-
 feature_attributions_rows = get_feature_attributions(explain, 0)
-
 
 def generate_dataframe():
     feature_list = []
@@ -171,18 +169,9 @@ def generate_dataframe():
 
     return df, feature_list, feature_values, feature_contributions
 
-
 df, feature_list, feature_values, feature_contributions = generate_dataframe()
 
 ###############
-import plotly
-import plotly.graph_objects as go
-import plotly.express as px
-import matplotlib.pyplot as plt
-import seaborn as sns
-import time
-
-##############
 
 if is_male == 'true':
     is_male = 'Boy'
@@ -209,6 +198,8 @@ df3 = df3.set_index('Feature')
 # st.dataframe(df)
 # st.dataframe(df3)
 
+#####################USER INPUT DISPLAY######################
+
 col1, col2, col3, col4, col5 = st.columns(5)
 st.columns([1, 1, 3, 1, 1])
 
@@ -219,44 +210,42 @@ col2.metric("Gestation Week Number", gestation_weeks, df3.loc['gestation_weeks',
 col3.metric("Maternal smoking status", cigarette_use.upper(), df3.loc['cigarette_use', 'Contribution'])
 col3.metric("Maternal drinking status", alcohol_use.upper(), df3.loc['alcohol_use', 'Contribution'])
 
-# with st.sidebar:
-#    if st.button("Baby weight prediction"):
 # Display the Prediction in LBs
 predicted_value = round(endpoint.predict(instance).predictions[0]['value'], 2)
 with st.spinner('Generating Result...'):
     time.sleep(1)
 
-
-
-
-#col5.metric(label='Baby Weight Prediction', value=f"{predicted_value} LB")
 with col5:
     st.subheader("Baby Weight Prediction:")
     st.title(f"{predicted_value} LB")
 
+# water fall horizontall
+
+
 # layout
 df["Color"] = np.where(df["Contribution"] < 0, 'Negative Contribution', 'Positive Contribution')
-
-# water fall horizontall
-import plotly.graph_objects as go
-
 fig = go.Figure(go.Waterfall(
     orientation="h",
     measure=["relative", "relative", "relative", "relative", "relative", "relative", "relative", "total"],
     y=feature_list,
     x=feature_contributions,
+    text=feature_contributions,textposition='outside',
     connector={"mode": "between", "line": {"width": 4, "color": "rgb(0, 0, 0)", "dash": "solid"}}
 ))
-st.subheader('Feature Importance')
+#st.subheader('Feature Importance')
 st.plotly_chart(fig, use_container_width=True)
 #########
-
-
-#####
-df2 = df.query("Feature in ('Baseline_Score','Final_Prediction')")
-# st.table(df2)
-fig = px.bar(df2, x='Contribution', y='Feature', color='Feature')
+df5 = df.query("Feature not in ('Baseline_Score','Final_Prediction')")
+fig = px.bar(df5, x='Contribution', y='Feature',
+             color='Color', category_orders=df['Feature'],
+             text_auto=True)
 st.plotly_chart(fig, use_container_width=True)
 
-fig = px.bar(df, x='Contribution', y='Feature', color='Color', category_orders=df['Feature'])
-st.plotly_chart(fig, use_container_width=True)
+df5 = df.query("Feature not in ('Baseline_Score','Final_Prediction')")
+
+df6 = df5[['Feature','Contribution']]
+st.table(df6)
+
+
+
+
