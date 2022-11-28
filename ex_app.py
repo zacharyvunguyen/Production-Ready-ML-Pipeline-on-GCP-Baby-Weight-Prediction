@@ -29,6 +29,7 @@ aip.init(
     staging_bucket=GCS_BUCKET)
 
 ENDPOINT_NAME = 'projects/69318036822/locations/us-central1/endpoints/4074389870305345536'
+#ENDPOINT_NAME = 'projects/69318036822/locations/us-central1/endpoints/4718085758647271424'
 
 endpoint = aip.Endpoint(
     project=PROJECT,
@@ -59,10 +60,10 @@ with st.sidebar:
     st.title('Baby Weight Prediction')
     # Input:
     is_male = st.radio('What is the gender of the baby?', ['Boy', 'Girl'])
-    mother_age = st.slider('What is the age of the mother?', 10, 100, 25)
-    gestation_weeks = st.slider('The number of weeks of the pregnancy:', 10, 50, 37)
-    cigarette_use = st.radio('Maternal smoking status:', ['Yes', 'No'])
-    alcohol_use = st.radio('Maternal drinking status:', ['Yes', 'No'])
+    mother_age = st.slider('What is the age of the mother?', 10, 100, 20)
+    gestation_weeks = st.slider('The number of weeks of the pregnancy:', 10, 50, 39)
+    cigarette_use = st.radio('Maternal smoking status:', ['Yes', 'No','Unknown'])
+    alcohol_use = st.radio('Maternal drinking status:', ['Yes', 'No','Unknown'])
     plurality = st.selectbox('How many children were born as a result of this pregnancy?',
                              ['single(1)', 'Twins(2)', 'Triplets(3)', 'Quadruplets(4)'])
 
