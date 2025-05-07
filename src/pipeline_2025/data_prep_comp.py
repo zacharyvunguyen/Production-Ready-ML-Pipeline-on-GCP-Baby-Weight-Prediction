@@ -25,13 +25,7 @@ def extract_source_data(
     extracted_bq_table_id: str,
     filter_year: int,
     region: str,  # Though not directly used by BQ client for multi-region, good for consistency
-) -> NamedTuple(
-    "Outputs",
-    [
-        ("extracted_table_uri", str),
-        ("extracted_table_id", str),
-    ],
-):
+) -> NamedTuple('outputs', [('extracted_table_uri', str), ('extracted_table_id', str)]):
     """Extracts and filters data from a source BigQuery table.
 
     Args:
@@ -42,12 +36,14 @@ def extract_source_data(
         region: The GCP region where the pipeline is running (for consistency).
 
     Returns:
-        NamedTuple:
+        NamedTuple with:
             extracted_table_uri: The URI of the newly created extracted table.
             extracted_table_id: The ID of the newly created extracted table.
     """
     import logging # Ensure logging is imported within the component function
     from google.cloud import bigquery
+    import json
+    from collections import namedtuple # Keep for instantiation
 
     # Basic configuration for logging within this component
     # This ensures logs from this component are formatted and have a level set.
@@ -118,9 +114,17 @@ def extract_source_data(
         logging.error(f"BigQuery job failed: {e}")
         raise
 
-    # Return output parameters
-    # KFP automatically creates outputs with these names from the NamedTuple
-    return (f"bq://{extracted_bq_table_id}", str(extracted_bq_table_id))
+    # Create output values
+    extracted_table_uri_val = f"bq://{extracted_bq_table_id}"
+    extracted_table_id_val = extracted_bq_table_id
+    
+    # Log the outputs for debugging
+    logging.info(f"Output - extracted_table_uri: {extracted_table_uri_val}")
+    logging.info(f"Output - extracted_table_id: {extracted_table_id_val}")
+    
+    # Instantiate the inline NamedTuple for return
+    Outputs = namedtuple('outputs', ['extracted_table_uri', 'extracted_table_id'])
+    return Outputs(extracted_table_uri=extracted_table_uri_val, extracted_table_id=extracted_table_id_val)
 
 
 @dsl.component(
@@ -133,13 +137,7 @@ def preprocess_data_and_split(
     preprocessed_bq_table_id: str,
     data_limit: int,
     region: str,  # Though not directly used by BQ client, good for consistency
-) -> NamedTuple(
-    "Outputs",
-    [
-        ("preprocessed_table_uri", str),
-        ("preprocessed_table_id", str),
-    ],
-):
+) -> NamedTuple('outputs', [('preprocessed_table_uri', str), ('preprocessed_table_id', str)]):
     """Preprocesses data and splits it into TRAIN, VALIDATE, and TEST sets.
 
     Args:
@@ -150,12 +148,14 @@ def preprocess_data_and_split(
         region: The GCP region where the pipeline is running (for consistency).
 
     Returns:
-        NamedTuple:
+        NamedTuple with:
             preprocessed_table_uri: URI of the newly created preprocessed table.
             preprocessed_table_id: ID of the newly created preprocessed table.
     """
     import logging # Ensure logging is imported within the component function
     from google.cloud import bigquery
+    import json
+    from collections import namedtuple # Keep for instantiation
 
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -244,8 +244,14 @@ def preprocess_data_and_split(
         logging.error(f"BigQuery job failed: {e}")
         raise
 
-    # Return output parameters
-    return (
-        f"bq://{preprocessed_bq_table_id}",
-        str(preprocessed_bq_table_id),
-    )
+    # Create output values
+    preprocessed_table_uri_val = f"bq://{preprocessed_bq_table_id}"
+    preprocessed_table_id_val = preprocessed_bq_table_id
+    
+    # Log the outputs for debugging
+    logging.info(f"Output - preprocessed_table_uri: {preprocessed_table_uri_val}")
+    logging.info(f"Output - preprocessed_table_id: {preprocessed_table_id_val}")
+    
+    # Instantiate the inline NamedTuple for return
+    Outputs = namedtuple('outputs', ['preprocessed_table_uri', 'preprocessed_table_id'])
+    return Outputs(preprocessed_table_uri=preprocessed_table_uri_val, preprocessed_table_id=preprocessed_table_id_val)
