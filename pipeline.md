@@ -1,16 +1,23 @@
 # Baby MLOps Pipeline Overview
 
-This document describes the components of the Kubeflow Pipeline (KFP) used for the Baby Weight Prediction project. The pipeline automates the process of data extraction, preprocessing, model training (using BigQuery ML), model evaluation, and metrics collection.
+This document describes the components of the Kubeflow Pipeline (KFP) used for the Baby Weight Prediction project. The pipeline includes two parallel branches: a BigQuery ML (BQML) branch and an AutoML branch, both performing data extraction, preprocessing, model training, evaluation, and metrics collection.
 
 ## Pipeline Flow
 
-The pipeline consists of the following components executed sequentially:
+The pipeline consists of the following components:
 
-1.  **Extract Source Data** (`extract_source_data`)
-2.  **Preprocess and Split Data** (`preprocess_data_and_split`)
-3.  **Train BQML Model** (`BigqueryCreateModelJobOp`)
-4.  **Evaluate BQML Model** (`BigqueryEvaluateModelJobOp`)
-5.  **Collect BQML Metrics** (`collect_eval_metrics_bqml`)
+1. **Extract Source Data** (`extract_source_data`)
+2. **Preprocess and Split Data** (`preprocess_data_and_split`)
+
+**BQML Branch:**
+3. **Train BQML Model** (`BigqueryCreateModelJobOp`)
+4. **Evaluate BQML Model** (`BigqueryEvaluateModelJobOp`)
+5. **Collect BQML Metrics** (`collect_eval_metrics_bqml`)
+
+**AutoML Branch:**
+6. **Create Vertex AI Dataset** (`TabularDatasetCreateOp`)
+7. **Train AutoML Model** (`AutoMLTabularTrainingJobRunOp`)
+8. **Collect AutoML Metrics** (`collect_eval_metrics_automl`)
 
 ## Component Details
 
@@ -52,6 +59,8 @@ The pipeline consists of the following components executed sequentially:
     *   Handles `NULL` values for `cigarette_use` and `alcohol_use` by casting to `STRING` and replacing `NULL` with "Unknown".
     *   Creates a `hash_values` column based on several features for reproducible data splitting.
     *   Creates a `data_split` column (`TRAIN`, `VALIDATE`, `TEST`) based on `MOD(hash_values, 10)`.
+
+## BQML Branch Components
 
 ### 3. Train BQML Model
 
@@ -109,4 +118,83 @@ The pipeline consists of the following components executed sequentially:
     *   Reads the `metadata` from the input artifact.
     *   Parses specific metric values (MAE, MSE, R² Score, Median Absolute Error).
     *   Calculates RMSE from MSE.
-    *   Logs these metrics using `metrics.log_metric()` for display in the Vertex AI Pipelines UI. 
+    *   Logs these metrics using `metrics.log_metric()` for display in the Vertex AI Pipelines UI.
+
+## AutoML Branch Components
+
+### 6. Create Vertex AI Dataset
+
+*   **Component Function:** `google_cloud_pipeline_components.v1.dataset.TabularDatasetCreateOp` (Pre-built GCPC component)
+*   **Description:** Creates a Vertex AI tabular dataset from the preprocessed BigQuery table.
+*   **Inputs:**
+    *   `project` (str): GCP Project ID.
+    *   `display_name` (str): Display name for the dataset.
+    *   `bq_source` (str): BigQuery table source as a URI (e.g., `bq://project.dataset.table`).
+    *   `location` (str): GCP region.
+*   **Outputs:**
+    *   `dataset` (Artifact): The created Vertex AI Dataset artifact.
+*   **Key Operations:**
+    *   Creates a Vertex AI TabularDataset resource from the BigQuery table.
+
+### 7. Train AutoML Model
+
+*   **Component Function:** `google_cloud_pipeline_components.v1.automl.training_job.AutoMLTabularTrainingJobRunOp` (Pre-built GCPC component)
+*   **Description:** Trains an AutoML tabular model using the Vertex AI dataset.
+*   **Inputs:**
+    *   `project` (str): GCP Project ID.
+    *   `display_name` (str): Display name for the training job.
+    *   `optimization_prediction_type` (str): "regression" for this case.
+    *   `optimization_objective` (str): "minimize-rmse" for this regression task.
+    *   `budget_milli_node_hours` (int): Training budget in milli node hours.
+    *   `model_display_name` (str): Display name for the resulting model.
+    *   `dataset` (Artifact): The Vertex AI dataset from the previous step.
+    *   `target_column` (str): Name of the target column (e.g., "weight_pounds").
+    *   `column_specs` (dict): Specifications for how to treat each column.
+    *   `location` (str): GCP region.
+*   **Outputs:**
+    *   `model` (Artifact): The trained AutoML model artifact.
+*   **Key Operations:**
+    *   Trains an AutoML tabular regression model on the dataset.
+    *   Registers the model in Vertex AI Model Registry.
+
+### 8. Collect AutoML Metrics
+
+*   **Component Function:** `src.pipeline_2025.create_automl_comp.collect_eval_metrics_automl`
+*   **Description:** Extracts evaluation metrics from the trained AutoML model.
+*   **Inputs:**
+    *   `project_id` (str): GCP Project ID.
+    *   `region` (str): GCP region.
+    *   `model_artifact` (Artifact): The trained model artifact from the "Train AutoML Model" step.
+*   **Outputs (as `NamedTuple` and KFP scalar metrics):**
+    *   `mean_absolute_error` (float)
+    *   `mean_squared_error` (float)
+    *   `root_mean_squared_error` (float)
+    *   `r2_score` (float)
+    *   `median_absolute_error` (float) (set to 0.0 if not available from AutoML)
+    *   `framework` (str, value: "AutoML")
+*   **Key Operations:**
+    *   Uses the Vertex AI SDK to load the model and fetch its evaluations.
+    *   Maps AutoML metric names to consistent output names.
+    *   Extracts the available metrics from the evaluation.
+    *   Calculates MSE from RMSE (as AutoML provides RMSE directly).
+    *   Implements timeout handling to prevent component hanging.
+    *   Includes robust error handling to ensure component always completes.
+    *   Logs all metrics for display in the Vertex AI Pipelines UI.
+
+## Improvements in the Metrics Collection Components
+
+Several enhancements were made to improve reliability and performance:
+
+1. **Timeout Mechanism:** A 3-minute timeout was implemented in the AutoML metrics collection component to prevent it from hanging if the API calls take too long.
+
+2. **Error Handling:** Comprehensive error handling ensures the components continue execution even if there are issues accessing the metrics.
+
+3. **Default Values:** All metrics are initialized with sensible default values (0.0) to ensure consistent outputs even when metrics are missing.
+
+4. **Consistent Metrics Structure:** Both BQML and AutoML components return exactly the same metric structure, making downstream comparison easier.
+
+5. **Robust API Interaction:** The AutoML component uses the high-level Vertex AI SDK with proper exception handling for more reliable API interactions.
+
+6. **Logging Enhancement:** Detailed logging helps with debugging and tracking the metrics extraction process.
+
+These improvements ensure that the pipeline runs efficiently and reliably, with consistent metric outputs from both model types for comparison. 
