@@ -11,6 +11,8 @@ from kfp import compiler
 from google.cloud import aiplatform as vertex_ai
 # Import pre-built Google Cloud Pipeline Components (GCPC)
 from google_cloud_pipeline_components.v1 import bigquery as gcpc_bq
+# Import BigqueryCreateModelJobOp specifically
+from google_cloud_pipeline_components.v1.bigquery import BigqueryCreateModelJobOp
 from google_cloud_pipeline_components.v1 import dataset as gcpc_dataset
 from google_cloud_pipeline_components.v1 import endpoint as gcpc_endpoint
 from google_cloud_pipeline_components.v1 import model as gcpc_model
@@ -22,6 +24,8 @@ from src.pipeline_2025 import data_prep_comp
 # from src.pipeline_2025 import bqml_training_comp # Placeholder
 # from src.pipeline_2025 import automl_training_comp # Placeholder
 # from src.pipeline_2025 import model_eval_comp # Placeholder
+# Import the BQML component module
+from src.pipeline_2025 import create_bqml_comp
 
 # --- Configure Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -82,6 +86,11 @@ def load_config():
     config["DATA_EXTRACTION_YEAR"] = int(os.getenv("DATA_EXTRACTION_YEAR", "2000"))
     config["DATA_PREPROCESSING_LIMIT"] = int(os.getenv("DATA_PREPROCESSING_LIMIT", "100000"))
 
+    # BQML Configuration (add these)
+    config["BQML_MODEL_NAME"] = os.getenv("BQML_MODEL_NAME", "bqml_babyweight_dnn_combined")
+    config["BQML_MODEL_VERSION_ALIASES"] = os.getenv("BQML_MODEL_VERSION_ALIASES", "v1") # Example default
+    config["VAR_TARGET"] = os.getenv("VAR_TARGET", "weight_pounds") # Your target variable
+
     # Use fixed table names by removing the timestamp
     config["EXTRACTED_BQ_TABLE_FULL_ID"] = f"{config['PROJECT_ID']}.{config['BQ_DATASET_STAGING']}.{config['EXTRACTED_DATA_TABLE_NAME']}"
     config["PREPPED_BQ_TABLE_FULL_ID"] = f"{config['PROJECT_ID']}.{config['BQ_DATASET_STAGING']}.{config['PREPPED_DATA_TABLE_NAME']}"
@@ -92,20 +101,21 @@ def load_config():
     # Validate essential configs for data prep
     for key in ["PROJECT_ID", "REGION", "BUCKET_NAME", "SOURCE_BQ_TABLE", 
                 "BQ_DATASET_STAGING", "BQ_LOCATION", 
-                "EXTRACTED_DATA_TABLE_NAME", "PREPPED_DATA_TABLE_NAME"]:
+                "EXTRACTED_DATA_TABLE_NAME", "PREPPED_DATA_TABLE_NAME",
+                "BQML_MODEL_NAME", "VAR_TARGET"]:
         if not config.get(key):
             raise ValueError(f"Missing essential configuration in .env for data prep: {key}")
     return config
 
 # --- KFP v2 Pipeline Definition ---
 def create_pipeline_definition(config: dict):
-    """Defines the KFP v2 pipeline structure focusing only on data prep components."""
+    """Defines the KFP v2 pipeline structure including data prep and BQML training."""
     @dsl.pipeline(
-        name=config["PIPELINE_NAME"] + "-data-prep-only", # Indicate it's a partial pipeline
-        description="Modernized baby weight data preparation pipeline (Python script version).",
+        name=config["PIPELINE_NAME"] + "-bqml-train",
+        description="Modernized baby weight pipeline with data prep and BQML training.",
         pipeline_root=config["PIPELINE_ROOT"]
     )
-    def modernized_data_prep_pipeline_py(
+    def modernized_bqml_pipeline_py(
         project_id: str = config["PROJECT_ID"],
         # region: str = config["REGION"], # Not directly used by these components if bq_location is specific
         bq_location: str = config["BQ_LOCATION"],
@@ -115,6 +125,10 @@ def create_pipeline_definition(config: dict):
         prepped_bq_table_full_id: str = config["PREPPED_BQ_TABLE_FULL_ID"],
         data_extraction_year: int = config["DATA_EXTRACTION_YEAR"],
         data_preprocessing_limit: int = config["DATA_PREPROCESSING_LIMIT"],
+        # Add BQML parameters
+        bqml_model_name: str = config["BQML_MODEL_NAME"],
+        bqml_model_version_aliases: str = config["BQML_MODEL_VERSION_ALIASES"],
+        var_target: str = config["VAR_TARGET"],
         # Removed parameters not used by data_prep_comp directly or downstream steps in this version
         # vertex_dataset_display_name: str = config["VERTEX_DATASET_DISPLAY_NAME"],
         # automl_model_display_name: str = config["AUTOML_MODEL_DISPLAY_NAME"],
@@ -140,10 +154,27 @@ def create_pipeline_definition(config: dict):
             region=bq_location # Using bq_location for the preprocess task since it works with the new table
         ).set_display_name("Preprocess and Split Data")
 
-        logging.info("Pipeline definition created with only data prep components.")
+        # --- Add BQML Training Step --- 
+        train_query = create_bqml_comp.create_query_build_bqml_model(
+            project=project_id,
+            bq_dataset=config["BQ_DATASET_STAGING"],
+            bq_model_name=bqml_model_name,
+            bq_version_aliases=bqml_model_version_aliases,
+            var_target=var_target,
+            # Use the output table ID from the previous step
+            bq_train_table_id=preprocess_task.outputs["preprocessed_table_id"] 
+        )
+
+        bqml_train_task = gcpc_bq.BigqueryCreateModelJobOp(
+            project=project_id,
+            location=bq_location,
+            query=train_query,
+        ).set_display_name("Train BQML Model").after(preprocess_task)
+
+        logging.info("Pipeline definition created with data prep and BQML training components.")
         # Removed TabularDatasetCreateOp and all subsequent placeholder steps
 
-    return modernized_data_prep_pipeline_py
+    return modernized_bqml_pipeline_py
 
 # --- Main Execution ---
 def main():
@@ -176,7 +207,7 @@ def main():
 
     pipeline_json_spec_path = os.path.join(
         COMPILED_JSON_OUTPUT_DIR, 
-        f"{config['PIPELINE_NAME']}_{config['TIMESTAMP']}.json"
+        f"{config['PIPELINE_NAME']}-bqml-train_{config['TIMESTAMP']}.json"
     )
 
     logging.info(f"Compiling pipeline to {pipeline_json_spec_path}...")
@@ -193,7 +224,7 @@ def main():
     if args.run_pipeline:
         logging.info("Submitting pipeline job to Vertex AI...")
         pipeline_job = vertex_ai.PipelineJob(
-            display_name=f"{config['PIPELINE_NAME']}-run-{config['TIMESTAMP']}",
+            display_name=f"{config['PIPELINE_NAME']}-bqml-train-run-{config['TIMESTAMP']}",
             template_path=pipeline_json_spec_path,
             # pipeline_root=config["PIPELINE_ROOT"], # Usually inherited from compiled spec
             enable_caching=config["ENABLE_CACHING"],
