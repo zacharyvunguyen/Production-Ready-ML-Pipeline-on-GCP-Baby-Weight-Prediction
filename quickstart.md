@@ -19,10 +19,10 @@ gcloud storage buckets create gs://baby-mlops-pipeline-bucket --project=baby-mlo
 
 ### b. Create BigQuery Dataset
 
-This dataset will be used for staging intermediate data tables.
+This dataset will be used for staging intermediate data tables. Ensure the location matches the `BQ_LOCATION` in your `.env` file (typically `US` for compatibility with the `bigquery-public-data.samples.natality` table).
 
 ```bash
-bq --location=us-central1 mk --dataset --project_id=baby-mlops --description 'Staging dataset for baby MLOps pipeline' baby_mlops_data_staging
+bq --location=US mk --dataset --project_id=baby-mlops --description 'Staging dataset for baby MLOps pipeline' baby_mlops_data_staging
 ```
 
 ### c. Create Service Account
@@ -89,4 +89,9 @@ EXTRACTED_DATA_TABLE_NAME="natality_source_extract"
 PREPPED_DATA_TABLE_NAME="natality_features_prepped"
 DATA_EXTRACTION_YEAR="2000"
 DATA_PREPROCESSING_LIMIT="100000"
+
+# BQML Model Configuration (Defaults shown, customize as needed)
+BQML_MODEL_NAME="my_babyweight_model"
+BQML_MODEL_VERSION_ALIASES="v1"
+VAR_TARGET="weight_pounds"
 ``` 
