@@ -7,16 +7,19 @@ import argparse # For command-line arguments
 from dotenv import load_dotenv, dotenv_values
 import kfp
 from kfp import dsl
+from kfp.dsl import Artifact, Metrics
 from kfp import compiler
 from google.cloud import aiplatform as vertex_ai
 # Import pre-built Google Cloud Pipeline Components (GCPC)
 from google_cloud_pipeline_components.v1 import bigquery as gcpc_bq
-# Import BigqueryCreateModelJobOp specifically
-from google_cloud_pipeline_components.v1.bigquery import BigqueryCreateModelJobOp
+# Import BigqueryCreateModelJobOp and BigqueryEvaluateModelJobOp specifically
+from google_cloud_pipeline_components.v1.bigquery import BigqueryCreateModelJobOp, BigqueryEvaluateModelJobOp
 from google_cloud_pipeline_components.v1 import dataset as gcpc_dataset
 from google_cloud_pipeline_components.v1 import endpoint as gcpc_endpoint
 from google_cloud_pipeline_components.v1 import model as gcpc_model
-from google_cloud_pipeline_components.v1 import automl as gcpc_automl
+# from google_cloud_pipeline_components.v1 import automl as gcpc_automl # Removed incorrect import
+# Correct import for AutoML training job components
+from google_cloud_pipeline_components.v1.automl.training_job import AutoMLTabularTrainingJobRunOp
 
 # Import your custom components
 # Ensure src/ is in PYTHONPATH or adjust import accordingly if running from elsewhere
@@ -26,6 +29,10 @@ from src.pipeline_2025 import data_prep_comp
 # from src.pipeline_2025 import model_eval_comp # Placeholder
 # Import the BQML component module
 from src.pipeline_2025 import create_bqml_comp
+# Import the AutoML component module
+from src.pipeline_2025 import create_automl_comp
+# Import the Model Selection component
+from src.pipeline_2025 import select_best_model_comp
 
 # --- Configure Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -91,6 +98,67 @@ def load_config():
     config["BQML_MODEL_VERSION_ALIASES"] = os.getenv("BQML_MODEL_VERSION_ALIASES", "v1") # Example default
     config["VAR_TARGET"] = os.getenv("VAR_TARGET", "weight_pounds") # Your target variable
 
+    # Prepare formatted BQML version aliases
+    raw_aliases = config["BQML_MODEL_VERSION_ALIASES"]
+    aliases_list = [alias.strip() for alias in raw_aliases.split(',')]
+    config["FORMATTED_BQML_MODEL_VERSION_ALIASES"] = '[' + ', '.join([f"'{alias}'" for alias in aliases_list]) + ']'
+
+    # AutoML Configuration - Add these
+    # Ensure PIPELINE_NAME is available before being used in f-string defaults
+    pipeline_name_for_defaults = config.get("PIPELINE_NAME", "baby-mlops-pipeline") # Fallback if PIPELINE_NAME somehow not set yet
+    config["VERTEX_DATASET_DISPLAY_NAME"] = os.getenv("VERTEX_DATASET_DISPLAY_NAME", f"{pipeline_name_for_defaults}-vertex-dataset")
+    config["AUTOML_MODEL_DISPLAY_NAME"] = os.getenv("AUTOML_MODEL_DISPLAY_NAME", f"{pipeline_name_for_defaults}-automl-model")
+    config["AUTOML_BUDGET_MILLI_NODE_HOURS"] = int(os.getenv("AUTOML_BUDGET_MILLI_NODE_HOURS", "1000"))
+    # Create the combined display name for the training job itself
+    config["AUTOML_TRAINING_JOB_DISPLAY_NAME"] = f'{config["AUTOML_MODEL_DISPLAY_NAME"]}_TrainingJob'
+
+    # Model Selection Configuration
+    config["COMPARISON_METRIC"] = os.getenv("COMPARISON_METRIC", "mean_absolute_error")
+    # Default thresholds for deployment decision
+    default_thresholds = {
+        "mean_absolute_error": 0.9,
+        "mean_squared_error": 1.2,
+        "root_mean_squared_error": 1.1,
+        "r2_score": 0.35  # For r2_score, higher is better, so this is a minimum threshold
+    }
+    # Try to parse JSON from environment variable, fallback to defaults if not provided
+    thresholds_str = os.getenv("MODEL_THRESHOLDS_JSON", "")
+    if thresholds_str:
+        try:
+            config["MODEL_THRESHOLDS"] = json.loads(thresholds_str)
+        except json.JSONDecodeError:
+            logging.warning(f"Could not parse MODEL_THRESHOLDS_JSON: {thresholds_str}. Using defaults.")
+            config["MODEL_THRESHOLDS"] = default_thresholds
+    else:
+        config["MODEL_THRESHOLDS"] = default_thresholds
+        
+    logging.info(f"Model comparison metric: {config['COMPARISON_METRIC']}")
+    logging.info(f"Model thresholds: {config['MODEL_THRESHOLDS']}")
+
+    # For column_specs, it's better to define it in Python or load from a dedicated JSON file if complex.
+    # For simplicity here, we'll assume a simple default or expect it to be well-formed if set via .env.
+    automl_column_specs_json = os.getenv("AUTOML_COLUMN_SPECS_JSON")
+    if automl_column_specs_json:
+        try:
+            config["AUTOML_COLUMN_SPECS"] = json.loads(automl_column_specs_json)
+        except json.JSONDecodeError as e:
+            logging.error(f"Error decoding AUTOML_COLUMN_SPECS_JSON: {e}. Using empty dict as fallback.")
+            config["AUTOML_COLUMN_SPECS"] = {}
+    else:
+        # Define a default if not provided, or make it mandatory in validation
+        # Generate default 'auto' specs for known features if not provided
+        logging.info("AUTOML_COLUMN_SPECS_JSON not found in .env. Generating default 'auto' specs.")
+        feature_columns = [
+            "is_male", 
+            "mother_age", 
+            "plurality_category", 
+            "gestation_weeks", 
+            "cigarette_use_str", 
+            "alcohol_use_str"
+        ]
+        config["AUTOML_COLUMN_SPECS"] = {col: "auto" for col in feature_columns}
+        logging.info(f"Generated default AUTOML_COLUMN_SPECS: {config['AUTOML_COLUMN_SPECS']}")
+
     # Use fixed table names by removing the timestamp
     config["EXTRACTED_BQ_TABLE_FULL_ID"] = f"{config['PROJECT_ID']}.{config['BQ_DATASET_STAGING']}.{config['EXTRACTED_DATA_TABLE_NAME']}"
     config["PREPPED_BQ_TABLE_FULL_ID"] = f"{config['PROJECT_ID']}.{config['BQ_DATASET_STAGING']}.{config['PREPPED_DATA_TABLE_NAME']}"
@@ -102,41 +170,43 @@ def load_config():
     for key in ["PROJECT_ID", "REGION", "BUCKET_NAME", "SOURCE_BQ_TABLE", 
                 "BQ_DATASET_STAGING", "BQ_LOCATION", 
                 "EXTRACTED_DATA_TABLE_NAME", "PREPPED_DATA_TABLE_NAME",
-                "BQML_MODEL_NAME", "VAR_TARGET"]:
+                "BQML_MODEL_NAME", "VAR_TARGET",
+                "VERTEX_DATASET_DISPLAY_NAME", "AUTOML_MODEL_DISPLAY_NAME", "AUTOML_BUDGET_MILLI_NODE_HOURS"]:
         if not config.get(key):
             raise ValueError(f"Missing essential configuration in .env for data prep: {key}")
     return config
 
 # --- KFP v2 Pipeline Definition ---
 def create_pipeline_definition(config: dict):
-    """Defines the KFP v2 pipeline structure including data prep and BQML training."""
+    """Defines the KFP v2 pipeline structure including data prep, BQML and AutoML training, and evaluation."""
     @dsl.pipeline(
-        name=config["PIPELINE_NAME"] + "-bqml-train",
-        description="Modernized baby weight pipeline with data prep and BQML training.",
+        name=config["PIPELINE_NAME"] + "-bqml-automl-train-eval",
+        description="Modernized baby weight pipeline with data prep, BQML & AutoML training, and evaluation.",
         pipeline_root=config["PIPELINE_ROOT"]
     )
-    def modernized_bqml_pipeline_py(
+    def modernized_full_pipeline_py(
         project_id: str = config["PROJECT_ID"],
-        # region: str = config["REGION"], # Not directly used by these components if bq_location is specific
         bq_location: str = config["BQ_LOCATION"],
-        # vertex_ai_resource_location: str = config["VERTEX_AI_LOCATION"], # Not used in this version
         source_bq_table: str = config["SOURCE_BQ_TABLE"],
         extracted_bq_table_full_id: str = config["EXTRACTED_BQ_TABLE_FULL_ID"],
         prepped_bq_table_full_id: str = config["PREPPED_BQ_TABLE_FULL_ID"],
         data_extraction_year: int = config["DATA_EXTRACTION_YEAR"],
         data_preprocessing_limit: int = config["DATA_PREPROCESSING_LIMIT"],
-        # Add BQML parameters
         bqml_model_name: str = config["BQML_MODEL_NAME"],
-        bqml_model_version_aliases: str = config["BQML_MODEL_VERSION_ALIASES"],
+        formatted_bqml_model_version_aliases: str = config["FORMATTED_BQML_MODEL_VERSION_ALIASES"],
         var_target: str = config["VAR_TARGET"],
-        # Removed parameters not used by data_prep_comp directly or downstream steps in this version
-        # vertex_dataset_display_name: str = config["VERTEX_DATASET_DISPLAY_NAME"],
-        # automl_model_display_name: str = config["AUTOML_MODEL_DISPLAY_NAME"],
-        # automl_budget_milli_node_hours: int = config["AUTOML_BUDGET_MILLI_NODE_HOURS"],
-        # automl_target_column: str = config["AUTOML_TARGET_COLUMN"],
-        # automl_column_specs: dict = config["AUTOML_COLUMN_SPECS"],
-        # bqml_model_name: str = config["BQML_MODEL_NAME"],
-        # bqml_model_query: str = config["BQML_MODEL_QUERY"],
+        # AutoML Parameters - Added
+        vertex_dataset_display_name: str = config["VERTEX_DATASET_DISPLAY_NAME"],
+        # Use the combined training job display name
+        automl_training_job_display_name: str = config["AUTOML_TRAINING_JOB_DISPLAY_NAME"], 
+        # Keep the base model display name for the model itself
+        automl_model_display_name_param: str = config["AUTOML_MODEL_DISPLAY_NAME"], 
+        automl_budget_milli_node_hours: int = config["AUTOML_BUDGET_MILLI_NODE_HOURS"],
+        automl_column_specs: dict = config["AUTOML_COLUMN_SPECS"],
+        region: str = config["REGION"], # Added region for AutoML components that might need it
+        # Model Selection Parameters
+        comparison_metric: str = config["COMPARISON_METRIC"],
+        model_thresholds: dict = config["MODEL_THRESHOLDS"]
     ):
         extract_task = data_prep_comp.extract_source_data(
             project_id=project_id,
@@ -154,14 +224,14 @@ def create_pipeline_definition(config: dict):
             region=bq_location # Using bq_location for the preprocess task since it works with the new table
         ).set_display_name("Preprocess and Split Data")
 
+        # --- BQML Branch ---
         # --- Add BQML Training Step --- 
         train_query = create_bqml_comp.create_query_build_bqml_model(
             project=project_id,
             bq_dataset=config["BQ_DATASET_STAGING"],
             bq_model_name=bqml_model_name,
-            bq_version_aliases=bqml_model_version_aliases,
+            formatted_bq_version_aliases=formatted_bqml_model_version_aliases,
             var_target=var_target,
-            # Use the output table ID from the previous step
             bq_train_table_id=preprocess_task.outputs["preprocessed_table_id"] 
         )
 
@@ -171,10 +241,73 @@ def create_pipeline_definition(config: dict):
             query=train_query,
         ).set_display_name("Train BQML Model").after(preprocess_task)
 
-        logging.info("Pipeline definition created with data prep and BQML training components.")
-        # Removed TabularDatasetCreateOp and all subsequent placeholder steps
+        # --- Add BQML Evaluation Step --- 
+        bqml_evaluate_task = gcpc_bq.BigqueryEvaluateModelJobOp(
+            project=project_id, 
+            location=bq_location, 
+            model=bqml_train_task.outputs["model"] 
+        ).set_display_name('Evaluate BQML Model').after(bqml_train_task)
 
-    return modernized_bqml_pipeline_py
+        # --- Add BQML Metrics Collection Step --- 
+        collect_bqml_metrics_task = create_bqml_comp.collect_eval_metrics_bqml(
+            eval_metrics_artifact=bqml_evaluate_task.outputs["evaluation_metrics"]
+        ).set_display_name('Collect BQML Metrics').after(bqml_evaluate_task)
+
+        # --- AutoML Branch ---
+        # --- Create Vertex AI Dataset for AutoML --- 
+        vertex_dataset_task = gcpc_dataset.TabularDatasetCreateOp(
+            project=project_id,
+            display_name=vertex_dataset_display_name,
+            bq_source=f'bq://{preprocess_task.outputs["preprocessed_table_id"]}',
+            location=region # Use the main region for Vertex AI resources
+        ).set_display_name("Create Vertex AI Dataset").after(preprocess_task)
+
+        # --- Train AutoML Model ---
+        automl_train_task = AutoMLTabularTrainingJobRunOp(
+            project=project_id,
+            # Use the pipeline parameter for the job display name
+            display_name=automl_training_job_display_name,
+            optimization_prediction_type="regression",
+            optimization_objective="minimize-rmse",
+            budget_milli_node_hours=automl_budget_milli_node_hours,
+            # Use the pipeline parameter for the model display name itself
+            model_display_name=automl_model_display_name_param, 
+            dataset=vertex_dataset_task.outputs["dataset"],
+            target_column=var_target, 
+            column_specs=automl_column_specs,
+            location=region # Use the main region for Vertex AI resources
+        ).set_display_name("Train AutoML Model").after(vertex_dataset_task)
+
+        # Collect AutoML Model evaluation metrics
+        collect_automl_metrics_task = create_automl_comp.collect_eval_metrics_automl(
+            project_id=project_id,
+            region=region,
+            model_artifact=automl_train_task.outputs["model"],
+        ).set_display_name("Collect AutoML Metrics").after(automl_train_task)
+
+        # --- Model Selection - Compare BQML and AutoML models ---
+        select_model_task = select_best_model_comp.select_best_model(
+            automl_metrics=collect_automl_metrics_task.outputs["metrics_output"],
+            automl_model=automl_train_task.outputs["model"],
+            bqml_metrics=collect_bqml_metrics_task.outputs["metrics"],
+            bqml_model=bqml_train_task.outputs["model"],
+            reference_metric_name=comparison_metric,
+            thresholds_dict=model_thresholds
+        ).set_display_name("Select Best Model").after(collect_bqml_metrics_task, collect_automl_metrics_task)
+        
+        # Log the outputs from the selection task for visibility
+        logging.info(f"Model selection task added with outputs: {select_model_task.outputs}")
+        
+        # Log which model was selected and the deployment decision
+        best_model_name = select_model_task.outputs["best_model_name"]
+        deploy_decision = select_model_task.outputs["deploy_decision"]
+        best_metric = select_model_task.outputs["best_metric_value"]
+        logging.info(f"Pipeline will select best model ({best_model_name}) with metric {comparison_metric}={best_metric}")
+        logging.info(f"Deployment decision will be: {deploy_decision}")
+
+        logging.info("Pipeline definition created with data prep, BQML and AutoML training, evaluation, and model selection components.")
+
+    return modernized_full_pipeline_py
 
 # --- Main Execution ---
 def main():
@@ -207,7 +340,7 @@ def main():
 
     pipeline_json_spec_path = os.path.join(
         COMPILED_JSON_OUTPUT_DIR, 
-        f"{config['PIPELINE_NAME']}-bqml-train_{config['TIMESTAMP']}.json"
+        f"{config['PIPELINE_NAME']}-bqml-automl-train-eval_{config['TIMESTAMP']}.json"
     )
 
     logging.info(f"Compiling pipeline to {pipeline_json_spec_path}...")
@@ -224,7 +357,7 @@ def main():
     if args.run_pipeline:
         logging.info("Submitting pipeline job to Vertex AI...")
         pipeline_job = vertex_ai.PipelineJob(
-            display_name=f"{config['PIPELINE_NAME']}-bqml-train-run-{config['TIMESTAMP']}",
+            display_name=f"{config['PIPELINE_NAME']}-bqml-automl-train-eval-run-{config['TIMESTAMP']}",
             template_path=pipeline_json_spec_path,
             # pipeline_root=config["PIPELINE_ROOT"], # Usually inherited from compiled spec
             enable_caching=config["ENABLE_CACHING"],
