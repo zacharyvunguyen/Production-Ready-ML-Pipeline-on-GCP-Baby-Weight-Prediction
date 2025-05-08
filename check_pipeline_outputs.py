@@ -5,7 +5,7 @@ import json
 aiplatform.init(project="baby-mlops", location="us-central1")
 
 # Get the latest pipeline job ID (update this if you run again)
-pipeline_job_id = "baby-mlops-pipeline-data-prep-only-20250507213406"
+pipeline_job_id = "baby-mlops-pipeline-data-prep-only-20250507214711"
 pipeline_job = aiplatform.PipelineJob.get(
     f'projects/526740145114/locations/us-central1/pipelineJobs/{pipeline_job_id}'
 )
