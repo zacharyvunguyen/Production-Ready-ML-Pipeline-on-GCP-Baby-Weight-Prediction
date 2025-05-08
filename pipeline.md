@@ -19,6 +19,9 @@ The pipeline consists of the following components:
 7. **Train AutoML Model** (`AutoMLTabularTrainingJobRunOp`)
 8. **Collect AutoML Metrics** (`collect_eval_metrics_automl`)
 
+**Model Selection:**
+9. **Select Best Model** (`select_best_model`)
+
 ## Component Details
 
 ### 1. Extract Source Data
@@ -181,6 +184,29 @@ The pipeline consists of the following components:
     *   Includes robust error handling to ensure component always completes.
     *   Logs all metrics for display in the Vertex AI Pipelines UI.
 
+## Model Selection Component
+
+### 9. Select Best Model
+
+*   **Component Function:** `src.pipeline_2025.select_best_model_comp.select_best_model`
+*   **Description:** Compares the metrics from both BQML and AutoML models to select the best performing model based on a specified metric.
+*   **Inputs:**
+    *   `automl_metrics` (Metrics): Metrics from the AutoML model evaluation.
+    *   `automl_model` (Artifact): The trained AutoML model artifact.
+    *   `bqml_metrics` (Metrics): Metrics from the BQML model evaluation.
+    *   `bqml_model` (Artifact): The trained BQML model artifact.
+    *   `reference_metric_name` (str): The metric to use for comparison (e.g., "mean_absolute_error", "root_mean_squared_error", "r2_score").
+    *   `thresholds_dict` (dict): Dictionary of threshold values for deployment decision.
+*   **Outputs (as `NamedTuple`):**
+    *   `deploy_decision` (str): "true" if the best model meets the threshold criteria, "false" otherwise.
+    *   `best_model_name` (str): Name of the better performing model ("BQML" or "AutoML").
+    *   `best_metric_value` (float): The value of the reference metric for the best model.
+*   **Key Operations:**
+    *   Intelligently compares metrics based on whether lower values are better (MAE, MSE, RMSE) or higher values are better (R²).
+    *   Handles missing metrics with safe defaults.
+    *   Determines whether the best model meets deployment thresholds.
+    *   Provides detailed logging of the comparison and decision-making process.
+
 ## Improvements in the Metrics Collection Components
 
 Several enhancements were made to improve reliability and performance:
@@ -197,4 +223,6 @@ Several enhancements were made to improve reliability and performance:
 
 6. **Logging Enhancement:** Detailed logging helps with debugging and tracking the metrics extraction process.
 
-These improvements ensure that the pipeline runs efficiently and reliably, with consistent metric outputs from both model types for comparison. 
+7. **Model Selection Logic:** The model selection component intelligently compares different types of metrics, handling both "lower is better" and "higher is better" cases.
+
+These improvements ensure that the pipeline runs efficiently and reliably, with consistent metric outputs from both model types for comparison and intelligent model selection. 
