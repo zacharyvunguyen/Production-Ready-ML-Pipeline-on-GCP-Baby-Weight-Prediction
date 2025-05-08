@@ -82,8 +82,9 @@ def load_config():
     config["DATA_EXTRACTION_YEAR"] = int(os.getenv("DATA_EXTRACTION_YEAR", "2000"))
     config["DATA_PREPROCESSING_LIMIT"] = int(os.getenv("DATA_PREPROCESSING_LIMIT", "100000"))
 
-    config["EXTRACTED_BQ_TABLE_FULL_ID"] = f"{config['PROJECT_ID']}.{config['BQ_DATASET_STAGING']}.{config['EXTRACTED_DATA_TABLE_NAME']}_{config['TIMESTAMP']}"
-    config["PREPPED_BQ_TABLE_FULL_ID"] = f"{config['PROJECT_ID']}.{config['BQ_DATASET_STAGING']}.{config['PREPPED_DATA_TABLE_NAME']}_{config['TIMESTAMP']}"
+    # Use fixed table names by removing the timestamp
+    config["EXTRACTED_BQ_TABLE_FULL_ID"] = f"{config['PROJECT_ID']}.{config['BQ_DATASET_STAGING']}.{config['EXTRACTED_DATA_TABLE_NAME']}"
+    config["PREPPED_BQ_TABLE_FULL_ID"] = f"{config['PROJECT_ID']}.{config['BQ_DATASET_STAGING']}.{config['PREPPED_DATA_TABLE_NAME']}"
 
     # Removed Vertex AI Dataset, BQML, AutoML, Model Selection & Deployment configurations
     # as they are not used in the data-prep-only pipeline.
