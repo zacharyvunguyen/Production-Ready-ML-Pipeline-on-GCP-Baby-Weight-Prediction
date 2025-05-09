@@ -22,6 +22,10 @@ The pipeline consists of the following components:
 **Model Selection:**
 9. **Select Best Model** (`select_best_model`)
 
+**Deployment:**
+10. **Create Endpoint** (`EndpointCreateOp`)
+11. **Deploy Model** (`ModelDeployOp`) - conditionally executed based on model selection
+
 ## Component Details
 
 ### 1. Extract Source Data
@@ -207,6 +211,49 @@ The pipeline consists of the following components:
     *   Determines whether the best model meets deployment thresholds.
     *   Provides detailed logging of the comparison and decision-making process.
 
+## Deployment Components
+
+### 10. Create Endpoint
+
+*   **Component Function:** `google_cloud_pipeline_components.v1.endpoint.EndpointCreateOp` (Pre-built GCPC component)
+*   **Description:** Creates a Vertex AI Endpoint for model deployment.
+*   **Inputs:**
+    *   `project` (str): GCP Project ID.
+    *   `location` (str): GCP region for the endpoint.
+    *   `display_name` (str): Display name for the endpoint.
+*   **Outputs:**
+    *   `endpoint` (Artifact): The created Vertex AI Endpoint artifact.
+*   **Key Operations:**
+    *   Creates a Vertex AI Endpoint resource where models can be deployed.
+
+### 11. Deploy Model
+
+*   **Component Function:** `google_cloud_pipeline_components.v1.model.ModelDeployOp` (Pre-built GCPC component)
+*   **Description:** Deploys the selected model to the Vertex AI Endpoint. This component is conditionally executed based on the model selection results.
+*   **Inputs:**
+    *   `model` (Artifact): The trained model artifact (either BQML or AutoML model, depending on selection).
+    *   `endpoint` (Artifact): The Vertex AI Endpoint artifact.
+    *   `dedicated_resources_machine_type` (str): Machine type for the deployment (e.g., "n1-standard-2").
+    *   `dedicated_resources_min_replica_count` (int): Minimum number of replicas for the deployment.
+    *   `dedicated_resources_max_replica_count` (int): Maximum number of replicas for the deployment.
+    *   `traffic_split` (dict): Traffic split configuration ({"0": 100} means 100% of traffic goes to this model).
+*   **Outputs:**
+    *   `deployed_model` (Artifact): The deployed model artifact.
+*   **Key Operations:**
+    *   Deploys the selected model to the Vertex AI Endpoint.
+    *   Configures compute resources for the deployment.
+    *   Only executed if the model meets the quality threshold defined in the model selection component.
+
+## Conditional Execution
+
+The pipeline uses conditional execution for deployment with modern KFP control flow constructs:
+
+1. **Model Quality Check** - Uses `dsl.If` to only deploy a model if `deploy_decision` is "true", meaning the model meets the quality threshold for the chosen metric.
+
+2. **Model Type Branching** - Uses `dsl.If` and `dsl.Elif` for separate branches of AutoML and BQML model deployment, depending on which model performed better.
+
+This implementation follows best practices by using the more Pythonic control flow constructs introduced in KFP v2 (`dsl.If`/`dsl.Elif`/`dsl.Else`), which replace the deprecated `dsl.Condition` from KFP v1.
+
 ## Improvements in the Metrics Collection Components
 
 Several enhancements were made to improve reliability and performance:
@@ -225,4 +272,64 @@ Several enhancements were made to improve reliability and performance:
 
 7. **Model Selection Logic:** The model selection component intelligently compares different types of metrics, handling both "lower is better" and "higher is better" cases.
 
-These improvements ensure that the pipeline runs efficiently and reliably, with consistent metric outputs from both model types for comparison and intelligent model selection. 
+8. **Conditional Deployment:** The pipeline includes conditional logic to only deploy models that meet quality thresholds, and to deploy the best-performing model.
+
+These improvements ensure that the pipeline runs efficiently and reliably, with consistent metric outputs from both model types for comparison and intelligent model selection.
+
+# BQML Model Training Component
+
+The BQML model training component creates and trains a BigQuery ML model for baby weight prediction:
+
+## Component Functionality
+
+* Creates a DNN_LINEAR_COMBINED_REGRESSOR model in BigQuery ML
+* Uses hyperparameter tuning to optimize model performance
+* Registers the model directly with Vertex AI for deployment
+* Uses a cache-friendly model ID approach to optimize pipeline execution
+
+## Inputs
+
+* `project_id` (str): GCP project ID
+* `bq_dataset` (str): BigQuery dataset name for storing the model
+* `bq_model_name` (str): Name for the BigQuery ML model
+* `formatted_bq_version_aliases` (str): Formatted string for model version aliases
+* `var_target` (str): Target column for prediction (weight_pounds)
+* `bq_train_table_id` (str): Full path to preprocessed BigQuery training data table
+* `model_registry` (str): Set to "vertex_ai" to register model directly with Vertex AI
+* `vertex_ai_model_id` (str): ID for the model in Vertex AI Model Registry
+
+## Implementation Details
+
+The component uses the BigqueryCreateModelJobOp operator, providing a SQL query that:
+
+1. Creates a DNN_LINEAR_COMBINED_REGRESSOR model  
+2. Uses CUSTOM split method with 'custom_splits' column
+3. Configures hyperparameter tuning with multiple trials
+4. Directly registers the model with Vertex AI Model Registry
+5. Uses a stable model ID when caching is enabled, or a unique timestamp-based ID when caching is disabled
+
+The model is created with the following architecture:
+* Hidden layer sizes: [256, 128, 64]
+* Optimizer: Adagrad
+* Hyperparameter tuning for batch size and dropout rate
+* 24 trials with 4 parallel trials maximum
+
+### Cache-Friendly Approach
+
+To optimize pipeline execution and caching:
+* When caching is enabled, we use a stable identifier "model-name-cached"
+* When caching is disabled or in production, we use a unique identifier with timestamp
+
+This approach allows:
+* Fast development iterations using cached model training
+* Unique model versions for production deployment
+* Direct model deployment without export/upload steps
+
+# Model Deployment
+
+The pipeline uses a streamlined approach to model deployment:
+
+1. BQML models are registered directly with Vertex AI during creation using the `model_registry='vertex_ai'` option
+2. AutoML models are already registered with Vertex AI during training
+3. After model selection, the chosen model is deployed to a Vertex AI endpoint
+4. No export or conversion steps are needed, reducing complexity and potential points of failure 
