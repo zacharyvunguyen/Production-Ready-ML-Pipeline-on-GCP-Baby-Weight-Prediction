@@ -7,7 +7,7 @@ import argparse # For command-line arguments
 from dotenv import load_dotenv, dotenv_values
 import kfp
 from kfp import dsl
-from kfp.dsl import Artifact, Metrics
+from kfp.dsl import Artifact, Metrics, importer_node
 from kfp import compiler
 from google.cloud import aiplatform as vertex_ai
 # Import pre-built Google Cloud Pipeline Components (GCPC)
@@ -20,6 +20,12 @@ from google_cloud_pipeline_components.v1 import model as gcpc_model
 # from google_cloud_pipeline_components.v1 import automl as gcpc_automl # Removed incorrect import
 # Correct import for AutoML training job components
 from google_cloud_pipeline_components.v1.automl.training_job import AutoMLTabularTrainingJobRunOp
+# Import ModelDeployOp from endpoint module
+from google_cloud_pipeline_components.v1.endpoint import ModelDeployOp
+# from google_cloud_pipeline_components.v1.model.export_model import ModelExportOp
+# from google_cloud_pipeline_components.v1.model.upload_model import ModelUploadOp
+from google_cloud_pipeline_components.v1.dataset import TabularDatasetCreateOp
+from google_cloud_pipeline_components.types import artifact_types
 
 # Import your custom components
 # Ensure src/ is in PYTHONPATH or adjust import accordingly if running from elsewhere
@@ -33,6 +39,8 @@ from src.pipeline_2025 import create_bqml_comp
 from src.pipeline_2025 import create_automl_comp
 # Import the Model Selection component
 from src.pipeline_2025 import select_best_model_comp
+# Import helper component
+from src.pipeline_2025 import helper_components
 
 # --- Configure Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -135,6 +143,12 @@ def load_config():
     logging.info(f"Model comparison metric: {config['COMPARISON_METRIC']}")
     logging.info(f"Model thresholds: {config['MODEL_THRESHOLDS']}")
 
+    # Deployment Configuration
+    config["ENDPOINT_DISPLAY_NAME"] = os.getenv("ENDPOINT_DISPLAY_NAME", f"{pipeline_name_for_defaults}-endpoint")
+    config["DEPLOY_MACHINE_TYPE"] = os.getenv("DEPLOY_MACHINE_TYPE", "n1-standard-2")
+    config["DEPLOY_MIN_REPLICA_COUNT"] = int(os.getenv("DEPLOY_MIN_REPLICA_COUNT", "1"))
+    config["DEPLOY_MAX_REPLICA_COUNT"] = int(os.getenv("DEPLOY_MAX_REPLICA_COUNT", "1"))
+
     # For column_specs, it's better to define it in Python or load from a dedicated JSON file if complex.
     # For simplicity here, we'll assume a simple default or expect it to be well-formed if set via .env.
     automl_column_specs_json = os.getenv("AUTOML_COLUMN_SPECS_JSON")
@@ -206,7 +220,12 @@ def create_pipeline_definition(config: dict):
         region: str = config["REGION"], # Added region for AutoML components that might need it
         # Model Selection Parameters
         comparison_metric: str = config["COMPARISON_METRIC"],
-        model_thresholds: dict = config["MODEL_THRESHOLDS"]
+        model_thresholds: dict = config["MODEL_THRESHOLDS"],
+        # Deployment Parameters
+        endpoint_display_name: str = config["ENDPOINT_DISPLAY_NAME"],
+        deploy_machine_type: str = config["DEPLOY_MACHINE_TYPE"],
+        deploy_min_replica_count: int = config["DEPLOY_MIN_REPLICA_COUNT"],
+        deploy_max_replica_count: int = config["DEPLOY_MAX_REPLICA_COUNT"]
     ):
         extract_task = data_prep_comp.extract_source_data(
             project_id=project_id,
@@ -226,13 +245,23 @@ def create_pipeline_definition(config: dict):
 
         # --- BQML Branch ---
         # --- Add BQML Training Step --- 
+        # Create a deterministic model ID for caching purposes, or unique ID for production
+        if config["ENABLE_CACHING"]:
+            # When caching is enabled, use a stable identifier to allow task caching
+            vertex_model_id = f"{bqml_model_name}-cached"
+        else:
+            # When caching is disabled or in production, use a unique identifier
+            vertex_model_id = f"{bqml_model_name}-{config['TIMESTAMP']}"
+            
         train_query = create_bqml_comp.create_query_build_bqml_model(
             project=project_id,
             bq_dataset=config["BQ_DATASET_STAGING"],
             bq_model_name=bqml_model_name,
             formatted_bq_version_aliases=formatted_bqml_model_version_aliases,
             var_target=var_target,
-            bq_train_table_id=preprocess_task.outputs["preprocessed_table_id"] 
+            bq_train_table_id=preprocess_task.outputs["preprocessed_table_id"],
+            model_registry="vertex_ai",  # Add this to register directly with Vertex AI
+            vertex_ai_model_id=vertex_model_id  # Use our cache-friendly or unique ID
         )
 
         bqml_train_task = gcpc_bq.BigqueryCreateModelJobOp(
@@ -240,6 +269,20 @@ def create_pipeline_definition(config: dict):
             location=bq_location,
             query=train_query,
         ).set_display_name("Train BQML Model").after(preprocess_task)
+
+        # Construct the Vertex AI Model resource name string using the helper component
+        construct_name_task = helper_components.construct_vertex_model_resource_name(
+            project_id=project_id,
+            region=region, # Ensure this is the region where the Vertex AI model is registered
+            vertex_model_id=vertex_model_id # This is already defined based on caching settings
+        ).set_display_name("Construct Vertex Model Name").after(bqml_train_task) # Runs after BQML training ensures model exists
+
+        # Import the BQML model (now in Vertex AI Registry) as a VertexModel artifact for KFP
+        bqml_model_importer_task = importer_node.importer(
+            artifact_uri=construct_name_task.outputs["vertex_model_resource_name_str"],
+            artifact_class=artifact_types.VertexModel,
+            metadata={'resourceName': construct_name_task.outputs["vertex_model_resource_name_str"]} 
+        ).set_display_name("Import BQML as VertexModel Artifact").after(construct_name_task)
 
         # --- Add BQML Evaluation Step --- 
         bqml_evaluate_task = gcpc_bq.BigqueryEvaluateModelJobOp(
@@ -305,7 +348,48 @@ def create_pipeline_definition(config: dict):
         logging.info(f"Pipeline will select best model ({best_model_name}) with metric {comparison_metric}={best_metric}")
         logging.info(f"Deployment decision will be: {deploy_decision}")
 
-        logging.info("Pipeline definition created with data prep, BQML and AutoML training, evaluation, and model selection components.")
+        # --- Deployment - Create Endpoint and Deploy Best Model ---
+        # Create endpoint for model deployment
+        endpoint_task = gcpc_endpoint.EndpointCreateOp(
+            project=project_id,
+            location=region,
+            display_name=endpoint_display_name
+        ).set_display_name("Create Endpoint")
+
+        # Only deploy if the model meets the threshold criteria
+        with dsl.If(
+            select_model_task.outputs["deploy_decision"] == "true",
+            name="deploy_decision"
+        ):
+            # Deploy AutoML model if it's selected as best
+            with dsl.If(
+                select_model_task.outputs["best_model_name"] == "AutoML",
+                name="deploy_automl"
+            ):
+                automl_deploy_task = ModelDeployOp(
+                    model=automl_train_task.outputs["model"],
+                    endpoint=endpoint_task.outputs["endpoint"],
+                    dedicated_resources_machine_type=deploy_machine_type,
+                    dedicated_resources_min_replica_count=deploy_min_replica_count,
+                    dedicated_resources_max_replica_count=deploy_max_replica_count,
+                    traffic_split={"0": 100}
+                ).set_display_name("Deploy AutoML Model").after(endpoint_task)
+            
+            # Deploy BQML model if it's selected as best
+            with dsl.Elif(
+                select_model_task.outputs["best_model_name"] == "BQML",
+                name="deploy_bqml"
+            ):
+                bqml_deploy_task = ModelDeployOp(
+                    model=bqml_model_importer_task.outputs["artifact"], # Use the imported VertexModel artifact
+                    endpoint=endpoint_task.outputs["endpoint"],
+                    dedicated_resources_machine_type=deploy_machine_type,
+                    dedicated_resources_min_replica_count=deploy_min_replica_count,
+                    dedicated_resources_max_replica_count=deploy_max_replica_count,
+                    traffic_split={"0": 100}
+                ).set_display_name("Deploy BQML Model").after(endpoint_task)
+
+        logging.info("Pipeline definition created with data prep, BQML and AutoML training, evaluation, model selection, and deployment components.")
 
     return modernized_full_pipeline_py
 
