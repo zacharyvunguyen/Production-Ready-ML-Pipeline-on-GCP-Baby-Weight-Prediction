@@ -228,12 +228,12 @@ def initialize_vertex_ai() -> bool:
         logging.error(f"Vertex AI initialization error: {str(e)}")
         return False
 
-def get_available_endpoints() -> List[Tuple[str, str, datetime.datetime]]:
+def get_available_endpoints() -> List[Tuple[str, str, datetime.datetime, Optional[str]]]:
     """
     Find all available endpoints for baby weight prediction.
     
     Returns:
-        List of tuples containing (endpoint_id, display_name, creation_time)
+        List of tuples containing (endpoint_id, display_name, creation_time, model_id)
     """
     try:
         # List all endpoints
@@ -257,13 +257,42 @@ def get_available_endpoints() -> List[Tuple[str, str, datetime.datetime]]:
             reverse=True
         )
         
-        # Format the endpoint information
-        endpoint_info = [
-            (endpoint.name, endpoint.display_name, endpoint.create_time)
-            for endpoint in sorted_endpoints
-        ]
+        endpoint_info = []
+        for endpoint in sorted_endpoints:
+            model_id = None
+            # Get detailed endpoint information
+            try:
+                # Get a fresh endpoint object to ensure we have the latest data
+                endpoint_detail = vertex_ai.Endpoint(endpoint.name)
+                endpoint_dict = endpoint_detail.to_dict()
+                
+                # Try to extract model ID from deployedModels array if it exists
+                if "deployedModels" in endpoint_dict and endpoint_dict["deployedModels"]:
+                    # Go through each deployed model to find the model ID
+                    for deployed_model in endpoint_dict["deployedModels"]:
+                        # Try different possible field names for the model ID
+                        if "model" in deployed_model and deployed_model["model"]:
+                            # Extract last part of the model path 
+                            model_path = deployed_model["model"]
+                            model_id = model_path.split('/')[-1]
+                            break
+                        elif "modelId" in deployed_model:
+                            model_id = deployed_model["modelId"]
+                            break
+                        elif "id" in deployed_model:
+                            model_id = deployed_model["id"]
+                            break
+            except Exception as e:
+                logging.warning(f"Error extracting model ID for endpoint {endpoint.display_name}: {str(e)}")
+                model_id = None
+            
+            endpoint_info.append((
+                endpoint.name, 
+                endpoint.display_name, 
+                endpoint.create_time,
+                model_id
+            ))
         
-        logging.info(f"Found {len(endpoint_info)} relevant endpoints")
         return endpoint_info
     except Exception as e:
         st.error(f"Error finding endpoints: {str(e)}")
@@ -321,19 +350,40 @@ def predict_baby_weight(
             if not predictions or len(predictions) == 0:
                 raise ValueError("No predictions returned from the endpoint")
             
-            # Return the predicted value (should be a single float)
-            prediction_value = None
-            if isinstance(predictions[0], dict):
-                # If it's a dict, extract the first value or a specific key if known
-                prediction_value = float(list(predictions[0].values())[0])
-                logging.info(f"Extracted prediction from dict: {prediction_value}")
-            else:
-                # Try to convert directly to float
-                prediction_value = float(predictions[0])
-                
-            logging.info(f"Received prediction: {prediction_value}")
+            # For debugging
+            logging.info(f"Prediction type: {type(predictions[0])}")
+            logging.info(f"Prediction content: {predictions[0]}")
             
-            return prediction_value
+            # Return the predicted value, handling different response formats
+            prediction = predictions[0]
+            
+            # Case 1: Direct float value
+            if isinstance(prediction, (int, float)):
+                return float(prediction)
+                
+            # Case 2: Dictionary with a single value
+            elif isinstance(prediction, dict):
+                if len(prediction) == 1:
+                    # If there's only one value, use it
+                    return float(list(prediction.values())[0])
+                
+                # Try to find a key that might contain the prediction
+                for key in ['value', 'prediction', 'result', 'weight', 'output']:
+                    if key in prediction:
+                        return float(prediction[key])
+                
+                # If we haven't found a value yet, try to use any numeric value we can find
+                for value in prediction.values():
+                    if isinstance(value, (int, float)) or (isinstance(value, str) and value.replace('.', '', 1).isdigit()):
+                        return float(value)
+            
+            # Case 3: List or array - take first element if it's a number
+            elif isinstance(prediction, list) and len(prediction) > 0:
+                return float(prediction[0])
+            
+            # If we reach here, we couldn't parse the prediction
+            raise ValueError(f"Could not extract a numeric prediction from the response: {prediction}")
+            
     except Exception as e:
         error_msg = f"Prediction error: {str(e)}"
         logging.error(error_msg)
@@ -392,37 +442,46 @@ def main():
     # Sidebar for model selection
     st.sidebar.header("🔧 Model Settings")
     
-    # Display available endpoints with radio buttons
-    endpoint_options = [(f"{name} - Created: {format_date(created)}", id) 
-                       for id, name, created in available_endpoints]
-    
-    # Default to the most recent endpoint (first in the list)
-    default_endpoint_idx = 0
+    # Process endpoint options with proper handling for the model ID
+    endpoint_options = []
+    for endpoint_id, display_name, created_time, model_id in available_endpoints:
+        endpoint_options.append({
+            "endpoint_id": endpoint_id,
+            "display_name": display_name,
+            "created_time": created_time
+        })
     
     # Ensure endpoint_options is not empty before accessing elements
     if endpoint_options:
-        selected_endpoint_display, selected_endpoint_id = endpoint_options[default_endpoint_idx]
-        
-        with st.sidebar.expander("🔍 Select Endpoint", expanded=True):
-            # Create a list of endpoint names only for the radio button
-            endpoint_names = [f"Endpoint {i+1}: {display.split(' - ')[0]}" for i, (display, _) in enumerate(endpoint_options)]
-            
-            # Create a single radio button group with all endpoints
-            selected_idx = st.sidebar.radio(
-                "Select an endpoint to use:",
-                options=list(range(len(endpoint_options))),
-                format_func=lambda i: endpoint_names[i],
-                index=default_endpoint_idx
-            )
-            
-            # Update selected endpoint based on radio selection
-            selected_endpoint_display, selected_endpoint_id = endpoint_options[selected_idx]
+        # Automatically select the most recent endpoint (already sorted by create_time)
+        selected_endpoint = endpoint_options[0]
         
         # Display endpoint information with status indicator
+        st.sidebar.markdown("""
+        ### 🔍 Model Information
+        """)
+        
+        # Extract version if it exists in the name
+        endpoint_name = selected_endpoint["display_name"]
+        version = "latest"
+        if '-' in endpoint_name:
+            parts = endpoint_name.split('-')
+            if len(parts) > 1 and parts[-1].isalnum():
+                version = parts[-1]
+                
+        # Get the endpoint ID for display
+        endpoint_id_short = selected_endpoint["endpoint_id"].split('/')[-1]
+        
         st.sidebar.markdown(f"""
-        <div style="padding: 10px; background-color: #F0F5FF; border-radius: 8px; margin-top: 10px;">
+        <div style="padding: 15px; background-color: #F0F5FF; border-radius: 8px; margin-top: 10px;">
             <div><span class="endpoint-active"></span> <b>Active Endpoint:</b></div>
-            <div style="margin-top: 5px; font-size: 0.9rem;">{selected_endpoint_display.split(' - ')[0]}</div>
+            <div style="margin-top: 5px; font-size: 0.9rem;">{endpoint_name}</div>
+            <div style="margin-top: 5px; font-size: 0.8rem; color: #555;">
+                <b>Deployed:</b> {format_date(selected_endpoint["created_time"])}
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #555; overflow-wrap: break-word;">
+                <b>Endpoint ID:</b> {endpoint_id_short}
+            </div>
         </div>
         """, unsafe_allow_html=True)
     else:
@@ -445,6 +504,26 @@ def main():
         - Plurality (single/twins/etc.)
         - Cigarette use
         - Alcohol use
+        """)
+    
+    # Add pipeline explanation
+    with st.sidebar.expander("🔄 How the Pipeline Works"):
+        st.markdown("""
+        **ML Pipeline Steps:**
+        - **Data Extraction**: Queries natality data from BigQuery
+        - **Data Preparation**: Cleans, transforms, and splits data
+        - **Model Training**: Trains both BQML and AutoML models
+        - **Model Evaluation**: Compares model performance metrics
+        - **Model Selection**: Selects best performing model
+        - **Model Registry**: Registers model with versioning
+        - **Endpoint Management**: Creates/updates prediction endpoints
+        - **Traffic Management**: Controls traffic flow to new models
+        
+        **Tech Stack:**
+        - Google Cloud Vertex AI
+        - Kubeflow Pipelines
+        - TensorFlow Extended (TFX)
+        - BigQuery ML
         """)
     
     # Input form with modern styled columns
@@ -543,7 +622,7 @@ def main():
                 plurality=plurality,
                 cigarette_use=cigarette_use,
                 alcohol_use=alcohol_use,
-                endpoint_id=selected_endpoint_id
+                endpoint_id=selected_endpoint["endpoint_id"]
             )
             
             # Show success toast
