@@ -16,7 +16,7 @@ The solution addresses critical challenges in healthcare prediction by leveragin
 ## Pipeline Architecture
 The end-to-end MLOps pipeline orchestrates the entire machine learning lifecycle:
 
-![Vertex AI Pipeline Architecture](img/2025_final_pipeline.png)
+![Vertex AI Pipeline Architecture](img/final_pipeline.png)
 
 ## Key Production Features
 

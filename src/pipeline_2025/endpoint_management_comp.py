@@ -81,7 +81,12 @@ def update_traffic_split(
     endpoint_resource_name: str,
     deployed_model_id: str,
     traffic_percentage: int = 100,
-) -> NamedTuple("Outputs", [("success", bool)]):
+    registered_model_id: str = "",
+    model_version_id: str = "",
+) -> NamedTuple("Outputs", [
+    ("deployed_model_id", str),
+    ("model_details", dict)
+]):
     """Updates traffic split for a deployed model on an endpoint.
     
     Args:
@@ -90,14 +95,18 @@ def update_traffic_split(
         endpoint_resource_name: The full resource name of the endpoint
         deployed_model_id: ID of the deployed model to direct traffic to, or "PLACEHOLDER_ID" to use the most recently deployed model
         traffic_percentage: Percentage of traffic to route to the model (0-100)
+        registered_model_id: The full resource name of the registered model (from Model Registry)
+        model_version_id: The version ID of the registered model
         
     Returns:
-        success: Whether the traffic update was successful
+        deployed_model_id: The ID of the deployed model that received traffic
+        model_details: Dictionary with details about the model and deployment
     """
     import logging
     from google.cloud import aiplatform
     from collections import namedtuple
     import time
+    import json
     
     # Configure logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -109,33 +118,109 @@ def update_traffic_split(
     logging.info(f"Retrieving endpoint: {endpoint_resource_name}")
     endpoint = aiplatform.Endpoint(endpoint_name=endpoint_resource_name)
     
+    # Model details dictionary to return
+    model_details = {
+        "endpoint_id": endpoint_resource_name,
+        "registered_model_id": registered_model_id,
+        "model_version_id": model_version_id,
+        "deployment_time": "",
+        "traffic_percentage": traffic_percentage
+    }
+    
+    actual_model_id = ""  # Will store the resolved model ID
+    
     # Get current deployed models
     try:
-        # Wait a bit to ensure model deployment is completed
-        logging.info("Waiting for model deployment to complete...")
-        time.sleep(30)
+        # Wait longer to ensure model deployment is completed - deployment can take time
+        # Using a retry approach with exponential backoff
+        max_retries = 5
+        base_wait_time = 30  # seconds
         
-        # Refresh endpoint information
-        endpoint = aiplatform.Endpoint(endpoint_name=endpoint_resource_name)
+        deployed_models = []
         
-        # Get the real model ID if a placeholder was provided
-        actual_model_id = deployed_model_id
-        if deployed_model_id == "PLACEHOLDER_ID":
-            # If using placeholder, get the most recently deployed model
-            if endpoint.gca_resource.deployed_models:
-                # Sort deployed models by deployment time (most recent first)
-                sorted_models = sorted(
-                    endpoint.gca_resource.deployed_models, 
-                    key=lambda m: m.create_time.seconds if hasattr(m, 'create_time') else 0,
-                    reverse=True
-                )
-                actual_model_id = sorted_models[0].id
-                logging.info(f"Using most recently deployed model with ID: {actual_model_id}")
+        for attempt in range(max_retries):
+            # Calculate wait time with exponential backoff
+            wait_time = base_wait_time * (2 ** attempt)
+            logging.info(f"Attempt {attempt+1}/{max_retries}: Waiting {wait_time} seconds for model deployment to complete...")
+            time.sleep(wait_time)
+            
+            # Refresh endpoint information
+            endpoint = aiplatform.Endpoint(endpoint_name=endpoint_resource_name)
+            
+            # Check if there are deployed models
+            if hasattr(endpoint.gca_resource, 'deployed_models') and endpoint.gca_resource.deployed_models:
+                deployed_models = endpoint.gca_resource.deployed_models
+                logging.info(f"Found {len(deployed_models)} deployed models on endpoint")
+                # If we're looking for a specific ID and it's there, we can break early
+                if deployed_model_id != "PLACEHOLDER_ID" and any(m.id == deployed_model_id for m in deployed_models):
+                    logging.info(f"Found specified model ID: {deployed_model_id}")
+                    break
+                # If using PLACEHOLDER_ID, having any models is enough
+                if deployed_model_id == "PLACEHOLDER_ID" and deployed_models:
+                    logging.info("Using most recent deployed model")
+                    break
             else:
-                logging.error("No deployed models found on the endpoint")
-                success = False
-                outputs = namedtuple("Outputs", ["success"])
-                return outputs(success)
+                logging.info("No deployed models found yet, continuing to wait...")
+        
+        # Handle placeholder ID by finding the most recent model
+        if deployed_model_id == "PLACEHOLDER_ID":
+            if deployed_models:
+                # Extract creation times safely - models should have create_time but handle if missing
+                sorted_models = []
+                for model in deployed_models:
+                    # Try different attributes that might exist for creation time
+                    if hasattr(model, 'create_time') and model.create_time:
+                        try:
+                            # Convert to seconds for comparison if possible
+                            if hasattr(model.create_time, 'seconds'):
+                                time_value = model.create_time.seconds
+                            else:
+                                # Fall back to string representation for sorting
+                                time_value = str(model.create_time)
+                            sorted_models.append((model, time_value))
+                        except Exception as e:
+                            logging.warning(f"Error processing create_time for model {model.id}: {e}")
+                            # Add with a default sort value
+                            sorted_models.append((model, 0))
+                    else:
+                        # No create_time attribute, add with default value
+                        sorted_models.append((model, 0))
+                
+                # Sort by time value (descending)
+                sorted_models.sort(key=lambda x: x[1], reverse=True)
+                
+                if sorted_models:
+                    actual_model_id = sorted_models[0][0].id
+                    logging.info(f"Using most recently deployed model with ID: {actual_model_id}")
+                    
+                    # Add deployment time to model details if available
+                    model = sorted_models[0][0]
+                    if hasattr(model, 'create_time'):
+                        try:
+                            if hasattr(model.create_time, 'ToDatetime'):
+                                model_details["deployment_time"] = model.create_time.ToDatetime().isoformat()
+                            else:
+                                model_details["deployment_time"] = str(model.create_time)
+                        except Exception as e:
+                            logging.warning(f"Could not format deployment time: {e}")
+                            model_details["deployment_time"] = str(model.create_time)
+                else:
+                    raise ValueError("No models could be sorted by creation time")
+            else:
+                raise ValueError("No deployed models found on the endpoint after multiple retries")
+        else:
+            # Using specified model ID
+            actual_model_id = deployed_model_id
+            # Verify this ID exists on the endpoint
+            if not any(m.id == actual_model_id for m in deployed_models):
+                logging.warning(f"Specified model ID {actual_model_id} not found among deployed models")
+        
+        # Update the model details with actual model ID
+        model_details["deployed_model_id"] = actual_model_id
+        
+        # List all deployed model IDs for logging
+        all_ids = [m.id for m in deployed_models]
+        logging.info(f"All deployed model IDs: {all_ids}")
         
         # Prepare the traffic split dictionary
         traffic_split = {}
@@ -146,7 +231,7 @@ def update_traffic_split(
         # Distribute remaining traffic (if any) evenly among other deployed models
         remaining_percentage = 100 - traffic_percentage
         other_deployed_models = [
-            dm.id for dm in endpoint.gca_resource.deployed_models 
+            dm.id for dm in deployed_models 
             if dm.id != actual_model_id
         ]
         
@@ -161,10 +246,14 @@ def update_traffic_split(
         # Update the traffic split
         endpoint.update_traffic_split(traffic_split=traffic_split)
         logging.info("Traffic split updated successfully")
-        success = True
+        
+        # Add information about the traffic split to model details
+        model_details["traffic_split"] = json.dumps(traffic_split)
+        
     except Exception as e:
         logging.error(f"Error updating traffic split: {e}")
-        success = False
+        logging.exception("Full exception details:")
+        # Even if there was an error, return the model ID if we found it
     
-    outputs = namedtuple("Outputs", ["success"])
-    return outputs(success) 
+    outputs = namedtuple("Outputs", ["deployed_model_id", "model_details"])
+    return outputs(actual_model_id, model_details) 
