@@ -371,12 +371,12 @@ def create_pipeline_definition(config: dict):
         # Only deploy if the model meets the threshold criteria
         with dsl.If(
             select_model_task.outputs["deploy_decision"] == "true",
-            name="deploy_decision"
+            name="deployment_qualification_check"
         ):
             # For AutoML model
             with dsl.If(
                 select_model_task.outputs["best_model_name"] == "AutoML",
-                name="register_automl"
+                name="model_type_selector"
             ):
                 # Register AutoML model
                 register_automl_task = model_registry_comp.register_best_model_in_registry(
@@ -406,7 +406,8 @@ def create_pipeline_definition(config: dict):
                 ).set_display_name("Deploy AutoML Model").after(standard_endpoint_task)
                 
                 # Add traffic management without modifying the original flow
-                with dsl.If(endpoint_check_task.outputs["is_new_endpoint"] == False):
+                with dsl.If(endpoint_check_task.outputs["is_new_endpoint"] == False,
+                           name="traffic_update_decision"):
                     update_traffic_task = endpoint_management_comp.update_traffic_split(
                         project_id=project_id,
                         location=region,
@@ -448,7 +449,8 @@ def create_pipeline_definition(config: dict):
                 ).set_display_name("Deploy BQML Model").after(standard_endpoint_task)
                 
                 # Add traffic management without modifying the original flow
-                with dsl.If(endpoint_check_task.outputs["is_new_endpoint"] == False):
+                with dsl.If(endpoint_check_task.outputs["is_new_endpoint"] == False,
+                           name="traffic_update_decision"):
                     update_traffic_task = endpoint_management_comp.update_traffic_split(
                         project_id=project_id,
                         location=region,
