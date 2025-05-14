@@ -282,6 +282,8 @@ def get_available_endpoints() -> List[Tuple[str, str, datetime.datetime, Optiona
                         elif "id" in deployed_model:
                             model_id = deployed_model["id"]
                             break
+                
+                logging.info(f"Found model ID for endpoint {endpoint.display_name}: {model_id}")
             except Exception as e:
                 logging.warning(f"Error extracting model ID for endpoint {endpoint.display_name}: {str(e)}")
                 model_id = None
@@ -472,7 +474,18 @@ def main():
         # Get the endpoint ID for display
         endpoint_id_short = selected_endpoint["endpoint_id"].split('/')[-1]
         
-        st.sidebar.markdown(f"""
+        # Get model ID (from the available_endpoints data)
+        model_id = None
+        for endpoint_id, display_name, created_time, model_id_value in available_endpoints:
+            if endpoint_id == selected_endpoint["endpoint_id"]:
+                model_id = model_id_value
+                break
+        
+        # Display model ID if available
+        model_id_display = model_id[:10] + "..." if model_id and len(model_id) > 10 else "Not available"
+        
+        # Create the HTML for the sidebar info box
+        sidebar_html = f"""
         <div style="padding: 15px; background-color: #F0F5FF; border-radius: 8px; margin-top: 10px;">
             <div><span class="endpoint-active"></span> <b>Active Endpoint:</b></div>
             <div style="margin-top: 5px; font-size: 0.9rem;">{endpoint_name}</div>
@@ -482,8 +495,23 @@ def main():
             <div style="margin-top: 10px; font-size: 0.8rem; color: #555; overflow-wrap: break-word;">
                 <b>Endpoint ID:</b> {endpoint_id_short}
             </div>
+        """
+        
+        # Only add the model ID section if we have a valid model ID
+        if model_id:
+            sidebar_html += f"""
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #555; overflow-wrap: break-word;">
+                <b>Model ID:</b> {model_id}
+            </div>
+            """
+            
+        # Close the HTML div
+        sidebar_html += """
         </div>
-        """, unsafe_allow_html=True)
+        """
+        
+        # Display the sidebar info
+        st.sidebar.markdown(sidebar_html, unsafe_allow_html=True)
     else:
         st.sidebar.warning("No endpoints available. Please deploy a model first.")
         return
