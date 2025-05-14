@@ -1,0 +1,2347 @@
+{
+  "components": {
+    "comp-automl-tabular-training-job": {
+      "executorLabel": "exec-automl-tabular-training-job",
+      "inputDefinitions": {
+        "artifacts": {
+          "dataset": {
+            "artifactType": {
+              "schemaTitle": "google.VertexDataset",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "The dataset within the same Project from which data will be used to train the Model. The Dataset must use schema compatible with Model being trained, and what is compatible should be described in the used TrainingPipeline's [training_task_definition] [google.cloud.aiplatform.v1beta1.TrainingPipeline.training_task_definition]. For tabular Datasets, all their data is exported to training, to pick and choose from."
+          }
+        },
+        "parameters": {
+          "budget_milli_node_hours": {
+            "description": "The train budget of creating this Model, expressed in milli node hours i.e. 1,000 value in this field means 1 node hour. The training cost of the model will not exceed this budget. The final cost will be attempted to be close to the budget, though may end up being (even) noticeably smaller - at the backend's discretion. This especially may happen when further model training ceases to provide any improvements. If the budget is set to a value known to be insufficient to train a Model for the given training set, the training won't be attempted and will error. The minimum value is 1000 and the maximum is 72000.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "column_specs": {
+            "description": "Alternative to column_transformations where the keys of the dict are column names and their respective values are one of AutoMLTabularTrainingJob.column_data_types. When creating transformation for BigQuery Struct column, the column should be flattened using \".\" as the delimiter. Only columns with no child should have a transformation. If an input column has no transformations on it, such a column is ignored by the training, except for the targetColumn, which should have no transformations defined on. Only one of column_transformations or column_specs should be passed.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "column_transformations": {
+            "description": "Transformations to apply to the input columns (i.e. columns other than the targetColumn). Each transformation may produce multiple result values from the column's value, and all are used for training. When creating transformation for BigQuery Struct column, the column should be flattened using \".\" as the delimiter. Only columns with no child should have a transformation. If an input column has no transformations on it, such a column is ignored by the training, except for the targetColumn, which should have no transformations defined on. Only one of column_transformations or column_specs should be passed. Consider using column_specs as column_transformations will be deprecated eventually.",
+            "isOptional": true,
+            "parameterType": "LIST"
+          },
+          "disable_early_stopping": {
+            "defaultValue": false,
+            "description": "If true, the entire budget is used. This disables the early stopping feature. By default, the early stopping feature is enabled, which means that training might stop before the entire training budget has been used, if further training does no longer brings significant improvement to the model.",
+            "isOptional": true,
+            "parameterType": "BOOLEAN"
+          },
+          "display_name": {
+            "description": "The user-defined name of this TrainingPipeline.",
+            "parameterType": "STRING"
+          },
+          "export_evaluated_data_items": {
+            "defaultValue": false,
+            "description": "Whether to export the test set predictions to a BigQuery table. If False, then the export is not performed.",
+            "isOptional": true,
+            "parameterType": "BOOLEAN"
+          },
+          "export_evaluated_data_items_bigquery_destination_uri": {
+            "description": "URI of desired destination BigQuery table for exported test set predictions. Expected format: `bq://<project_id>:<dataset_id>:<table>` If not specified, then results are exported to the following auto-created BigQuery table: `<project_id>:export_evaluated_examples_<model_name>_<yyyy_MM_dd'T'HH_mm_ss_SSS'Z'>.evaluated_examples` Applies only if [export_evaluated_data_items] is True.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "export_evaluated_data_items_override_destination": {
+            "description": "Whether to override the contents of [export_evaluated_data_items_bigquery_destination_uri], if the table exists, for exported test set predictions. If False, and the table exists, then the training job will fail. Applies only if [export_evaluated_data_items] is True and [export_evaluated_data_items_bigquery_destination_uri] is specified.",
+            "isOptional": true,
+            "parameterType": "BOOLEAN"
+          },
+          "is_default_version": {
+            "description": "When set to True, the newly uploaded model version will automatically have alias \"default\" included. Subsequent uses of the model produced by this job without a version specified will use this \"default\" version. When set to False, the \"default\" alias will not be moved. Actions targeting the model version produced by this job will need to specifically reference this version by ID or alias. New model uploads, i.e. version 1, will always be \"default\" aliased.",
+            "isOptional": true,
+            "parameterType": "BOOLEAN"
+          },
+          "labels": {
+            "defaultValue": {},
+            "description": "The labels with user-defined metadata to organize TrainingPipelines. Label keys and values can be no longer than 64 characters (Unicode codepoints), can only contain lowercase letters, numeric characters, underscores and dashes. International characters are allowed. See https://goo.gl/xmQnxf for more information and examples of labels.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "location": {
+            "defaultValue": "us-central1",
+            "description": "Optional location to retrieve dataset from.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "model_display_name": {
+            "description": "If the script produces a managed Vertex AI Model. The display name of the Model. The name can be up to 128 characters long and can be consist of any UTF-8 characters. If not provided upon creation, the job's display_name is used.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "model_encryption_spec_key_name": {
+            "description": "The Cloud KMS resource identifier of the customer managed encryption key used to protect the model. Has the form: `projects/my-project/locations/my-region/keyRings/my-kr/cryptoKeys/my-key`. The key needs to be in the same region as where the compute resource is created. If set, the trained Model will be secured by this key. Overrides encryption_spec_key_name set in aiplatform.init.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "model_id": {
+            "description": "The ID to use for the Model produced by this job, which will become the final component of the model resource name. This value may be up to 63 characters, and valid characters are `[a-z0-9_-]`. The first character cannot be a number or hyphen.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "model_labels": {
+            "description": "The labels with user-defined metadata to organize your Models. Label keys and values can be no longer than 64 characters (Unicode codepoints), can only contain lowercase letters, numeric characters, underscores and dashes. International characters are allowed. See https://goo.gl/xmQnxf for more information and examples of labels.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "model_version_aliases": {
+            "description": "User provided version aliases so that the model version uploaded by this job can be referenced via alias instead of auto-generated version ID. A default version alias will be created for the first version of the model. The format is [a-z][a-zA-Z0-9-]{0,126}[a-z0-9]",
+            "isOptional": true,
+            "parameterType": "LIST"
+          },
+          "model_version_description": {
+            "description": "The description of the model version being uploaded by this job.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "optimization_objective": {
+            "description": "Objective function the Model is to be optimized towards. The training task creates a Model that maximizes/minimizes the value of the objective function over the validation set. The supported optimization objectives depend on the prediction type, and in the case of classification also the number of distinct values in the target column (two distint values -> binary, 3 or more distinct values -> multi class). If the field is not set, the default objective function is used. Classification: \"maximize-au-roc\" (default) - Maximize the area under the receiver operating characteristic (ROC) curve. \"minimize-log-loss\" - Minimize log loss. \"maximize-au-prc\" - Maximize the area under the precision-recall curve. \"maximize-precision-at-recall\" - Maximize precision for a specified recall value. \"maximize-recall-at-precision\" - Maximize recall for a specified precision value. Classification (multi class): \"minimize-log-loss\" (default) - Minimize log loss. Regression: \"minimize-rmse\" (default) - Minimize root-mean-squared error (RMSE). \"minimize-mae\" - Minimize mean-absolute error (MAE). \"minimize-rmsle\" - Minimize root-mean-squared log error (RMSLE).",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "optimization_objective_precision_value": {
+            "description": "Required when maximize-recall-at-precision optimizationObjective was picked, represents the precision value at which the optimization is done. The minimum value is 0 and the maximum is 1.0.",
+            "isOptional": true,
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "optimization_objective_recall_value": {
+            "description": "Required when maximize-precision-at-recall optimizationObjective was picked, represents the recall value at which the optimization is done. The minimum value is 0 and the maximum is 1.0.",
+            "isOptional": true,
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "optimization_prediction_type": {
+            "description": "The type of prediction the Model is to produce. \"classification\" - Predict one out of multiple target values is picked for each row. \"regression\" - Predict a value based on its relation to other values. This type is available only to columns that contain semantically numeric values, i.e. integers or floating point number, even if stored as e.g. strings.",
+            "parameterType": "STRING"
+          },
+          "parent_model": {
+            "description": "The resource name or model ID of an existing model. The new model uploaded by this job will be a version of `parent_model`. Only set this field when training a new version of an existing model.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "predefined_split_column_name": {
+            "description": "The key is a name of one of the Dataset's data columns. The value of the key (either the label's value or value in the column) must be one of {`training`, `validation`, `test`}, and it defines to which set the given piece of data is assigned. If for a piece of data the key is not present or has an invalid value, that piece is ignored by the pipeline. Supported only for tabular and time series Datasets.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "project": {
+            "description": "Project to retrieve dataset from.",
+            "parameterType": "STRING"
+          },
+          "target_column": {
+            "description": "The name of the column values of which the Model is to predict.",
+            "parameterType": "STRING"
+          },
+          "test_fraction_split": {
+            "description": "The fraction of the input data that is to be used to evaluate the Model. This is ignored if Dataset is not provided.",
+            "isOptional": true,
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "timestamp_split_column_name": {
+            "description": "The key is a name of one of the Dataset's data columns. The value of the key values of the key (the values in the column) must be in RFC 3339 `date-time` format, where `time-offset` = `\"Z\"` (e.g. 1985-04-12T23:20:50.52Z). If for a piece of data the key is not present or has an invalid value, that piece is ignored by the pipeline. Supported only for tabular and time series Datasets. This parameter must be used with training_fraction_split, validation_fraction_split and test_fraction_split.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "training_encryption_spec_key_name": {
+            "description": "The Cloud KMS resource identifier of the customer managed encryption key used to protect the training pipeline. Has the form: `projects/my-project/locations/my-region/keyRings/my-kr/cryptoKeys/my-key`. The key needs to be in the same region as where the compute resource is created. If set, this TrainingPipeline will be secured by this key. Note: Model trained by this TrainingPipeline is also secured by this key if `model_to_upload` is not set separately. Overrides encryption_spec_key_name set in aiplatform.init.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "training_fraction_split": {
+            "description": "The fraction of the input data that is to be used to train the Model. This is ignored if Dataset is not provided.",
+            "isOptional": true,
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "validation_fraction_split": {
+            "description": "The fraction of the input data that is to be used to validate the Model. This is ignored if Dataset is not provided.",
+            "isOptional": true,
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "weight_column": {
+            "description": "Name of the column that should be used as the weight column. Higher values in this column give more importance to the row during Model training. The column must have numeric values between 0 and 10000 inclusively, and 0 value means that the row is ignored. If the weight column field is not set, then all rows are assumed to have equal weight of 1.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "model": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "The trained Vertex AI Model resource or None if training did not produce a Vertex AI Model."
+          }
+        }
+      }
+    },
+    "comp-bigquery-create-model-job": {
+      "executorLabel": "exec-bigquery-create-model-job",
+      "inputDefinitions": {
+        "parameters": {
+          "job_configuration_query": {
+            "defaultValue": {},
+            "description": "A json formatted string describing the rest of the job configuration. For more details, see https://cloud.google.com/bigquery/docs/reference/rest/v2/Job#JobConfigurationQuery",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "labels": {
+            "defaultValue": {},
+            "description": "The labels associated with this job. You can use these to organize and group your jobs. Label keys and values can be no longer than 63 characters, can only containlowercase letters, numeric characters, underscores and dashes. International characters are allowed. Label values are optional. Label keys must start with a letter and each label in the list must have a different key.\nExample: { \"name\": \"wrench\", \"mass\": \"1.3kg\", \"count\": \"3\" }.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "location": {
+            "defaultValue": "us-central1",
+            "description": "Location of the job to create the BigQuery model. If not set, default to `US` multi-region.  For more details, see https://cloud.google.com/bigquery/docs/locations#specifying_your_location",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "project": {
+            "defaultValue": "{{$.pipeline_google_cloud_project_id}}",
+            "description": "Project to run BigQuery model creation job. Defaults to the project in which the PipelineJob is run.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "query": {
+            "description": "SQL query text to execute. Only standard SQL is supported.  If query are both specified in here and in job_configuration_query, the value in here will override the other one.",
+            "parameterType": "STRING"
+          },
+          "query_parameters": {
+            "defaultValue": [],
+            "description": "Query parameters for standard SQL queries. If query_parameters are both specified in here and in job_configuration_query, the value in here will override the other one.",
+            "isOptional": true,
+            "parameterType": "LIST"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "model": {
+            "artifactType": {
+              "schemaTitle": "google.BQMLModel",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "Describes the model which is created."
+          }
+        },
+        "parameters": {
+          "gcp_resources": {
+            "description": "Serialized gcp_resources proto tracking the BigQuery job. For more details, see https://github.com/kubeflow/pipelines/blob/master/components/google-cloud/google_cloud_pipeline_components/proto/README.md.",
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-bigquery-evaluate-model-job": {
+      "executorLabel": "exec-bigquery-evaluate-model-job",
+      "inputDefinitions": {
+        "artifacts": {
+          "model": {
+            "artifactType": {
+              "schemaTitle": "google.BQMLModel",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "BigQuery ML model for evaluation. For more details, see https://cloud.google.com/bigquery-ml/docs/reference/standard-sql/bigqueryml-syntax-evaluate#eval_model_name"
+          }
+        },
+        "parameters": {
+          "encryption_spec_key_name": {
+            "defaultValue": "",
+            "description": "Describes the Cloud KMS encryption key that will be used to protect destination BigQuery table. The BigQuery Service Account associated with your project requires access to this encryption key. If encryption_spec_key_name are both specified in here and in job_configuration_query, the value in here will override the other one.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "job_configuration_query": {
+            "defaultValue": {},
+            "description": "A json formatted string describing the rest of the job configuration. For more details, see https://cloud.google.com/bigquery/docs/reference/rest/v2/Job#JobConfigurationQuery",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "labels": {
+            "defaultValue": {},
+            "description": "The labels associated with this job. You can use these to organize and group your jobs. Label keys and values can be no longer than 63 characters, can only containlowercase letters, numeric characters, underscores and dashes. International characters are allowed. Label values are optional. Label keys must start with a letter and each label in the list must have a different key.\nExample: { \"name\": \"wrench\", \"mass\": \"1.3kg\", \"count\": \"3\" }.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "location": {
+            "defaultValue": "us-central1",
+            "description": "Location to run the BigQuery model evaluation job. If not set, default to `US` multi-region. For more details, see https://cloud.google.com/bigquery/docs/locations#specifying_your_location",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "project": {
+            "defaultValue": "{{$.pipeline_google_cloud_project_id}}",
+            "description": "Project to run BigQuery model evaluation job. Defaults to the project in which the PipelineJob is run.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "query_parameters": {
+            "defaultValue": [],
+            "description": "jobs.query parameters for standard SQL queries. If query_parameters are both specified in here and in job_configuration_query, the value in here will override the other one.",
+            "isOptional": true,
+            "parameterType": "LIST"
+          },
+          "query_statement": {
+            "defaultValue": "",
+            "description": "Query statement string used to generate the evaluation data, as in ML.EVALUATE(MODEL model_name[, {TABLE table_name | (query_statement)}] For more details, see https://cloud.google.com/bigquery-ml/docs/reference/standard-sql/bigqueryml-syntax-evaluate#eval_query_statement",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "table_name": {
+            "defaultValue": "",
+            "description": "BigQuery table id of the input table that contains the evaluation data, as in ML.EVALUATE(MODEL model_name[, {TABLE table_name | (query_statement)}] For more details, see https://cloud.google.com/bigquery-ml/docs/reference/standard-sql/bigqueryml-syntax-evaluate#eval_table_name",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "threshold": {
+            "defaultValue": -1.0,
+            "description": "A custom threshold for the binary-class classification model to be used for evaluation. The default value is 0.5. The threshold value that is supplied must be of type STRUCT. https://cloud.google.com/bigquery-ml/docs/reference/standard-sql/bigqueryml-syntax-evaluate#eval_threshold",
+            "isOptional": true,
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "evaluation_metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "gcp_resources": {
+            "description": "Serialized gcp_resources proto tracking the BigQuery job. For more details, see https://github.com/kubeflow/pipelines/blob/master/components/google-cloud/google_cloud_pipeline_components/proto/README.md.",
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-collect-eval-metrics-automl": {
+      "executorLabel": "exec-collect-eval-metrics-automl",
+      "inputDefinitions": {
+        "artifacts": {
+          "model_artifact": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "project_id": {
+            "parameterType": "STRING"
+          },
+          "region": {
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "metrics_output": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "framework": {
+            "parameterType": "STRING"
+          },
+          "mean_absolute_error": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "mean_squared_error": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "median_absolute_error": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "r2_score": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "root_mean_squared_error": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      }
+    },
+    "comp-collect-eval-metrics-bqml": {
+      "executorLabel": "exec-collect-eval-metrics-bqml",
+      "inputDefinitions": {
+        "artifacts": {
+          "eval_metrics_artifact": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "framework": {
+            "parameterType": "STRING"
+          },
+          "mean_absolute_error": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "mean_squared_error": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "median_absolute_error": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "r2_score": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "root_mean_squared_error": {
+            "parameterType": "NUMBER_DOUBLE"
+          }
+        }
+      }
+    },
+    "comp-condition-1": {
+      "dag": {
+        "tasks": {
+          "condition-branches-2": {
+            "componentRef": {
+              "name": "comp-condition-branches-2"
+            },
+            "inputs": {
+              "artifacts": {
+                "pipelinechannel--automl-tabular-training-job-model": {
+                  "componentInputArtifact": "pipelinechannel--automl-tabular-training-job-model"
+                },
+                "pipelinechannel--endpoint-create-endpoint": {
+                  "componentInputArtifact": "pipelinechannel--endpoint-create-endpoint"
+                },
+                "pipelinechannel--importer-artifact": {
+                  "componentInputArtifact": "pipelinechannel--importer-artifact"
+                }
+              },
+              "parameters": {
+                "pipelinechannel--deploy_machine_type": {
+                  "componentInputParameter": "pipelinechannel--deploy_machine_type"
+                },
+                "pipelinechannel--deploy_max_replica_count": {
+                  "componentInputParameter": "pipelinechannel--deploy_max_replica_count"
+                },
+                "pipelinechannel--deploy_min_replica_count": {
+                  "componentInputParameter": "pipelinechannel--deploy_min_replica_count"
+                },
+                "pipelinechannel--select-best-model-best_model_name": {
+                  "componentInputParameter": "pipelinechannel--select-best-model-best_model_name"
+                },
+                "pipelinechannel--select-best-model-deploy_decision": {
+                  "componentInputParameter": "pipelinechannel--select-best-model-deploy_decision"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "condition-branches-2"
+            }
+          }
+        }
+      },
+      "inputDefinitions": {
+        "artifacts": {
+          "pipelinechannel--automl-tabular-training-job-model": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "pipelinechannel--endpoint-create-endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "pipelinechannel--importer-artifact": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "pipelinechannel--deploy_machine_type": {
+            "parameterType": "STRING"
+          },
+          "pipelinechannel--deploy_max_replica_count": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "pipelinechannel--deploy_min_replica_count": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "pipelinechannel--select-best-model-best_model_name": {
+            "parameterType": "STRING"
+          },
+          "pipelinechannel--select-best-model-deploy_decision": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-condition-3": {
+      "dag": {
+        "tasks": {
+          "model-deploy": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-model-deploy"
+            },
+            "inputs": {
+              "artifacts": {
+                "endpoint": {
+                  "componentInputArtifact": "pipelinechannel--endpoint-create-endpoint"
+                },
+                "model": {
+                  "componentInputArtifact": "pipelinechannel--automl-tabular-training-job-model"
+                }
+              },
+              "parameters": {
+                "dedicated_resources_machine_type": {
+                  "componentInputParameter": "pipelinechannel--deploy_machine_type"
+                },
+                "dedicated_resources_max_replica_count": {
+                  "componentInputParameter": "pipelinechannel--deploy_max_replica_count"
+                },
+                "dedicated_resources_min_replica_count": {
+                  "componentInputParameter": "pipelinechannel--deploy_min_replica_count"
+                },
+                "traffic_split": {
+                  "runtimeValue": {
+                    "constant": {
+                      "0": 100.0
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "Deploy AutoML Model"
+            }
+          }
+        }
+      },
+      "inputDefinitions": {
+        "artifacts": {
+          "pipelinechannel--automl-tabular-training-job-model": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "pipelinechannel--endpoint-create-endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "pipelinechannel--deploy_machine_type": {
+            "parameterType": "STRING"
+          },
+          "pipelinechannel--deploy_max_replica_count": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "pipelinechannel--deploy_min_replica_count": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "pipelinechannel--select-best-model-best_model_name": {
+            "parameterType": "STRING"
+          },
+          "pipelinechannel--select-best-model-deploy_decision": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-condition-4": {
+      "dag": {
+        "tasks": {
+          "model-deploy-2": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-model-deploy-2"
+            },
+            "inputs": {
+              "artifacts": {
+                "endpoint": {
+                  "componentInputArtifact": "pipelinechannel--endpoint-create-endpoint"
+                },
+                "model": {
+                  "componentInputArtifact": "pipelinechannel--importer-artifact"
+                }
+              },
+              "parameters": {
+                "dedicated_resources_machine_type": {
+                  "componentInputParameter": "pipelinechannel--deploy_machine_type"
+                },
+                "dedicated_resources_max_replica_count": {
+                  "componentInputParameter": "pipelinechannel--deploy_max_replica_count"
+                },
+                "dedicated_resources_min_replica_count": {
+                  "componentInputParameter": "pipelinechannel--deploy_min_replica_count"
+                },
+                "traffic_split": {
+                  "runtimeValue": {
+                    "constant": {
+                      "0": 100.0
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "Deploy BQML Model"
+            }
+          }
+        }
+      },
+      "inputDefinitions": {
+        "artifacts": {
+          "pipelinechannel--endpoint-create-endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "pipelinechannel--importer-artifact": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "pipelinechannel--deploy_machine_type": {
+            "parameterType": "STRING"
+          },
+          "pipelinechannel--deploy_max_replica_count": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "pipelinechannel--deploy_min_replica_count": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "pipelinechannel--select-best-model-best_model_name": {
+            "parameterType": "STRING"
+          },
+          "pipelinechannel--select-best-model-deploy_decision": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-condition-branches-2": {
+      "dag": {
+        "tasks": {
+          "condition-3": {
+            "componentRef": {
+              "name": "comp-condition-3"
+            },
+            "inputs": {
+              "artifacts": {
+                "pipelinechannel--automl-tabular-training-job-model": {
+                  "componentInputArtifact": "pipelinechannel--automl-tabular-training-job-model"
+                },
+                "pipelinechannel--endpoint-create-endpoint": {
+                  "componentInputArtifact": "pipelinechannel--endpoint-create-endpoint"
+                }
+              },
+              "parameters": {
+                "pipelinechannel--deploy_machine_type": {
+                  "componentInputParameter": "pipelinechannel--deploy_machine_type"
+                },
+                "pipelinechannel--deploy_max_replica_count": {
+                  "componentInputParameter": "pipelinechannel--deploy_max_replica_count"
+                },
+                "pipelinechannel--deploy_min_replica_count": {
+                  "componentInputParameter": "pipelinechannel--deploy_min_replica_count"
+                },
+                "pipelinechannel--select-best-model-best_model_name": {
+                  "componentInputParameter": "pipelinechannel--select-best-model-best_model_name"
+                },
+                "pipelinechannel--select-best-model-deploy_decision": {
+                  "componentInputParameter": "pipelinechannel--select-best-model-deploy_decision"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "deploy_automl"
+            },
+            "triggerPolicy": {
+              "condition": "inputs.parameter_values['pipelinechannel--select-best-model-best_model_name'] == 'AutoML'"
+            }
+          },
+          "condition-4": {
+            "componentRef": {
+              "name": "comp-condition-4"
+            },
+            "inputs": {
+              "artifacts": {
+                "pipelinechannel--endpoint-create-endpoint": {
+                  "componentInputArtifact": "pipelinechannel--endpoint-create-endpoint"
+                },
+                "pipelinechannel--importer-artifact": {
+                  "componentInputArtifact": "pipelinechannel--importer-artifact"
+                }
+              },
+              "parameters": {
+                "pipelinechannel--deploy_machine_type": {
+                  "componentInputParameter": "pipelinechannel--deploy_machine_type"
+                },
+                "pipelinechannel--deploy_max_replica_count": {
+                  "componentInputParameter": "pipelinechannel--deploy_max_replica_count"
+                },
+                "pipelinechannel--deploy_min_replica_count": {
+                  "componentInputParameter": "pipelinechannel--deploy_min_replica_count"
+                },
+                "pipelinechannel--select-best-model-best_model_name": {
+                  "componentInputParameter": "pipelinechannel--select-best-model-best_model_name"
+                },
+                "pipelinechannel--select-best-model-deploy_decision": {
+                  "componentInputParameter": "pipelinechannel--select-best-model-deploy_decision"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "deploy_bqml"
+            },
+            "triggerPolicy": {
+              "condition": "!(inputs.parameter_values['pipelinechannel--select-best-model-best_model_name'] == 'AutoML') && inputs.parameter_values['pipelinechannel--select-best-model-best_model_name'] == 'BQML'"
+            }
+          }
+        }
+      },
+      "inputDefinitions": {
+        "artifacts": {
+          "pipelinechannel--automl-tabular-training-job-model": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "pipelinechannel--endpoint-create-endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "pipelinechannel--importer-artifact": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        },
+        "parameters": {
+          "pipelinechannel--deploy_machine_type": {
+            "parameterType": "STRING"
+          },
+          "pipelinechannel--deploy_max_replica_count": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "pipelinechannel--deploy_min_replica_count": {
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "pipelinechannel--select-best-model-best_model_name": {
+            "parameterType": "STRING"
+          },
+          "pipelinechannel--select-best-model-deploy_decision": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-construct-vertex-model-resource-name": {
+      "executorLabel": "exec-construct-vertex-model-resource-name",
+      "inputDefinitions": {
+        "parameters": {
+          "project_id": {
+            "parameterType": "STRING"
+          },
+          "region": {
+            "parameterType": "STRING"
+          },
+          "vertex_model_id": {
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "vertex_model_resource_name_str": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-endpoint-create": {
+      "executorLabel": "exec-endpoint-create",
+      "inputDefinitions": {
+        "parameters": {
+          "description": {
+            "defaultValue": "",
+            "description": "The description of the Endpoint.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "display_name": {
+            "description": "The user-defined name of the Endpoint. The name can be up to 128 characters long and can be consist of any UTF-8 characters.",
+            "parameterType": "STRING"
+          },
+          "encryption_spec_key_name": {
+            "defaultValue": "",
+            "description": "Customer-managed encryption key spec for an Endpoint. If set, this Endpoint and all of this Endoint's sub-resources will be secured by this key. Has the form: `projects/my-project/locations/my-location/keyRings/my-kr/cryptoKeys/my-key`. The key needs to be in the same region as where the compute resource is created.  If set, this Endpoint and all sub-resources of this Endpoint will be secured by this key.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "labels": {
+            "defaultValue": {},
+            "description": "The labels with user-defined metadata to organize your Endpoints.  Label keys and values can be no longer than 64 characters (Unicode codepoints), can only contain lowercase letters, numeric characters, underscores and dashes. International characters are allowed.  See https://goo.gl/xmQnxf for more information and examples of labels.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "location": {
+            "defaultValue": "us-central1",
+            "description": "Location to create the Endpoint. If not set, default to us-central1.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "network": {
+            "defaultValue": "",
+            "description": "The full name of the Google Compute Engine network to which the Endpoint should be peered. Private services access must already be configured for the network. If left unspecified, the Endpoint is not peered with any network. [Format](https://cloud.google.com/compute/docs/reference/rest/v1/networks/insert): `projects/{project}/global/networks/{network}`. Where `{project}` is a project number, as in `'12345'`, and `{network}` is network name.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "project": {
+            "defaultValue": "{{$.pipeline_google_cloud_project_id}}",
+            "description": "Project to create the Endpoint. Defaults to the project in which the PipelineJob is run.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "Artifact tracking the created Endpoint."
+          }
+        },
+        "parameters": {
+          "gcp_resources": {
+            "description": "Serialized JSON of `gcp_resources` [proto](https://github.com/kubeflow/pipelines/tree/master/components/google-cloud/google_cloud_pipeline_components/proto) which tracks the create Endpoint's long-running operation.",
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-extract-source-data": {
+      "executorLabel": "exec-extract-source-data",
+      "inputDefinitions": {
+        "parameters": {
+          "extracted_bq_table_id": {
+            "description": "Full ID for the output BigQuery table for extracted data.",
+            "parameterType": "STRING"
+          },
+          "filter_year": {
+            "description": "The year used to filter the data (e.g., data > filter_year).",
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "project_id": {
+            "description": "The GCP project ID.",
+            "parameterType": "STRING"
+          },
+          "region": {
+            "description": "The GCP region where the pipeline is running (for consistency).",
+            "parameterType": "STRING"
+          },
+          "source_bq_table_id": {
+            "description": "Full ID of the source BigQuery table (e.g., project.dataset.table).",
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "extracted_table_id": {
+            "parameterType": "STRING"
+          },
+          "extracted_table_uri": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-importer": {
+      "executorLabel": "exec-importer",
+      "inputDefinitions": {
+        "parameters": {
+          "metadata": {
+            "parameterType": "STRING"
+          },
+          "uri": {
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "artifact": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      }
+    },
+    "comp-model-deploy": {
+      "executorLabel": "exec-model-deploy",
+      "inputDefinitions": {
+        "artifacts": {
+          "endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "The Endpoint to be deployed to.",
+            "isOptional": true
+          },
+          "model": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "The model to be deployed."
+          }
+        },
+        "parameters": {
+          "automatic_resources_max_replica_count": {
+            "defaultValue": 0.0,
+            "description": "The maximum number of replicas this DeployedModel may be deployed on when the traffic against it increases. If the requested value is too large, the deployment will error, but if deployment succeeds then the ability to scale the model to that many replicas is guaranteed (barring service outages). If traffic against the DeployedModel increases beyond what its replicas at maximum may handle, a portion of the traffic will be dropped. If this value is not provided, a no upper bound for scaling under heavy traffic will be assume, though Vertex AI may be unable to scale beyond certain replica number.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "automatic_resources_min_replica_count": {
+            "defaultValue": 0.0,
+            "description": "The minimum number of replicas this DeployedModel will be always deployed on. If traffic against it increases, it may dynamically be deployed onto more replicas up to `automatic_resources_max_replica_count`, and as traffic decreases, some of these extra replicas may be freed. If the requested value is too large, the deployment will error.  This field is required if `dedicated_resources_machine_type` is not specified.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "dedicated_resources_accelerator_count": {
+            "defaultValue": 0.0,
+            "description": "The number of accelerators to attach to a worker replica.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "dedicated_resources_accelerator_type": {
+            "defaultValue": "",
+            "description": "Hardware accelerator type. Must also set accelerator_count if used. See [available options](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/MachineSpec#AcceleratorType).  This field is required if `dedicated_resources_machine_type` is specified.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "dedicated_resources_machine_type": {
+            "defaultValue": "",
+            "description": "The specification of a single machine used by the prediction.  This field is required if `automatic_resources_min_replica_count` is not specified.  See [more information](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.endpoints#dedicatedresources).",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "dedicated_resources_max_replica_count": {
+            "defaultValue": 0.0,
+            "description": "The maximum number of replicas this deployed model may the larger value of min_replica_count or 1 will be used. If value provided is smaller than min_replica_count, it will automatically be increased to be min_replica_count. The maximum number of replicas this deployed model may be deployed on when the traffic against it increases. If requested value is too large, the deployment will error, but if deployment succeeds then the ability to scale the model to that many replicas is guaranteed (barring service outages). If traffic against the deployed model increases beyond what its replicas at maximum may handle, a portion of the traffic will be dropped. If this value is not provided, will use `dedicated_resources_min_replica_count` as the default value.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "dedicated_resources_min_replica_count": {
+            "defaultValue": 0.0,
+            "description": "The minimum number of machine replicas this DeployedModel will be always deployed on. This value must be greater than or equal to 1. If traffic against the DeployedModel increases, it may dynamically be deployed onto more replicas, and as traffic decreases, some of these extra replicas may be freed.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "deployed_model_display_name": {
+            "defaultValue": "",
+            "description": "The display name of the DeployedModel. If not provided upon creation, the Model's display_name is used.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "disable_container_logging": {
+            "defaultValue": false,
+            "description": "For custom-trained Models and AutoML Tabular Models, the container of the DeployedModel instances will send stderr and stdout streams to Stackdriver Logging by default. Please note that the logs incur cost, which are subject to Cloud Logging pricing.  User can disable container logging by setting this flag to true.",
+            "isOptional": true,
+            "parameterType": "BOOLEAN"
+          },
+          "enable_access_logging": {
+            "defaultValue": false,
+            "description": "These logs are like standard server access logs, containing information like timestamp and latency for each prediction request.  Note that Stackdriver logs may incur a cost, especially if your project receives prediction requests at a high queries per second rate (QPS). Estimate your costs before enabling this option.",
+            "isOptional": true,
+            "parameterType": "BOOLEAN"
+          },
+          "explanation_metadata": {
+            "defaultValue": {},
+            "description": "Metadata describing the Model's input and output for explanation. See [more information](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/ExplanationSpec#explanationmetadata).",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "explanation_parameters": {
+            "defaultValue": {},
+            "description": "Parameters that configure explaining information of the Model's predictions. See [more information](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/ExplanationSpec#explanationmetadata).",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "service_account": {
+            "defaultValue": "",
+            "description": "The service account that the DeployedModel's container runs as. Specify the email address of the service account. If this service account is not specified, the container runs as a service account that doesn't have access to the resource project.  Users deploying the Model must have the `iam.serviceAccounts.actAs` permission on this service account.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "traffic_split": {
+            "defaultValue": {},
+            "description": "A map from a DeployedModel's ID to the percentage of this Endpoint's traffic that should be forwarded to that DeployedModel.  If this field is non-empty, then the Endpoint's trafficSplit will be overwritten with it. To refer to the ID of the just being deployed Model, a \"0\" should be used, and the actual ID of the new DeployedModel will be filled in its place by this method. The traffic percentage values must add up to 100.  If this field is empty, then the Endpoint's trafficSplit is not updated.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "gcp_resources": {
+            "description": "Serialized JSON of `gcp_resources` [proto](https://github.com/kubeflow/pipelines/tree/master/components/google-cloud/google_cloud_pipeline_components/proto) which tracks the deploy Model's long-running operation.",
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-model-deploy-2": {
+      "executorLabel": "exec-model-deploy-2",
+      "inputDefinitions": {
+        "artifacts": {
+          "endpoint": {
+            "artifactType": {
+              "schemaTitle": "google.VertexEndpoint",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "The Endpoint to be deployed to.",
+            "isOptional": true
+          },
+          "model": {
+            "artifactType": {
+              "schemaTitle": "google.VertexModel",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "The model to be deployed."
+          }
+        },
+        "parameters": {
+          "automatic_resources_max_replica_count": {
+            "defaultValue": 0.0,
+            "description": "The maximum number of replicas this DeployedModel may be deployed on when the traffic against it increases. If the requested value is too large, the deployment will error, but if deployment succeeds then the ability to scale the model to that many replicas is guaranteed (barring service outages). If traffic against the DeployedModel increases beyond what its replicas at maximum may handle, a portion of the traffic will be dropped. If this value is not provided, a no upper bound for scaling under heavy traffic will be assume, though Vertex AI may be unable to scale beyond certain replica number.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "automatic_resources_min_replica_count": {
+            "defaultValue": 0.0,
+            "description": "The minimum number of replicas this DeployedModel will be always deployed on. If traffic against it increases, it may dynamically be deployed onto more replicas up to `automatic_resources_max_replica_count`, and as traffic decreases, some of these extra replicas may be freed. If the requested value is too large, the deployment will error.  This field is required if `dedicated_resources_machine_type` is not specified.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "dedicated_resources_accelerator_count": {
+            "defaultValue": 0.0,
+            "description": "The number of accelerators to attach to a worker replica.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "dedicated_resources_accelerator_type": {
+            "defaultValue": "",
+            "description": "Hardware accelerator type. Must also set accelerator_count if used. See [available options](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/MachineSpec#AcceleratorType).  This field is required if `dedicated_resources_machine_type` is specified.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "dedicated_resources_machine_type": {
+            "defaultValue": "",
+            "description": "The specification of a single machine used by the prediction.  This field is required if `automatic_resources_min_replica_count` is not specified.  See [more information](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/projects.locations.endpoints#dedicatedresources).",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "dedicated_resources_max_replica_count": {
+            "defaultValue": 0.0,
+            "description": "The maximum number of replicas this deployed model may the larger value of min_replica_count or 1 will be used. If value provided is smaller than min_replica_count, it will automatically be increased to be min_replica_count. The maximum number of replicas this deployed model may be deployed on when the traffic against it increases. If requested value is too large, the deployment will error, but if deployment succeeds then the ability to scale the model to that many replicas is guaranteed (barring service outages). If traffic against the deployed model increases beyond what its replicas at maximum may handle, a portion of the traffic will be dropped. If this value is not provided, will use `dedicated_resources_min_replica_count` as the default value.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "dedicated_resources_min_replica_count": {
+            "defaultValue": 0.0,
+            "description": "The minimum number of machine replicas this DeployedModel will be always deployed on. This value must be greater than or equal to 1. If traffic against the DeployedModel increases, it may dynamically be deployed onto more replicas, and as traffic decreases, some of these extra replicas may be freed.",
+            "isOptional": true,
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "deployed_model_display_name": {
+            "defaultValue": "",
+            "description": "The display name of the DeployedModel. If not provided upon creation, the Model's display_name is used.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "disable_container_logging": {
+            "defaultValue": false,
+            "description": "For custom-trained Models and AutoML Tabular Models, the container of the DeployedModel instances will send stderr and stdout streams to Stackdriver Logging by default. Please note that the logs incur cost, which are subject to Cloud Logging pricing.  User can disable container logging by setting this flag to true.",
+            "isOptional": true,
+            "parameterType": "BOOLEAN"
+          },
+          "enable_access_logging": {
+            "defaultValue": false,
+            "description": "These logs are like standard server access logs, containing information like timestamp and latency for each prediction request.  Note that Stackdriver logs may incur a cost, especially if your project receives prediction requests at a high queries per second rate (QPS). Estimate your costs before enabling this option.",
+            "isOptional": true,
+            "parameterType": "BOOLEAN"
+          },
+          "explanation_metadata": {
+            "defaultValue": {},
+            "description": "Metadata describing the Model's input and output for explanation. See [more information](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/ExplanationSpec#explanationmetadata).",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "explanation_parameters": {
+            "defaultValue": {},
+            "description": "Parameters that configure explaining information of the Model's predictions. See [more information](https://cloud.google.com/vertex-ai/docs/reference/rest/v1/ExplanationSpec#explanationmetadata).",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "service_account": {
+            "defaultValue": "",
+            "description": "The service account that the DeployedModel's container runs as. Specify the email address of the service account. If this service account is not specified, the container runs as a service account that doesn't have access to the resource project.  Users deploying the Model must have the `iam.serviceAccounts.actAs` permission on this service account.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "traffic_split": {
+            "defaultValue": {},
+            "description": "A map from a DeployedModel's ID to the percentage of this Endpoint's traffic that should be forwarded to that DeployedModel.  If this field is non-empty, then the Endpoint's trafficSplit will be overwritten with it. To refer to the ID of the just being deployed Model, a \"0\" should be used, and the actual ID of the new DeployedModel will be filled in its place by this method. The traffic percentage values must add up to 100.  If this field is empty, then the Endpoint's trafficSplit is not updated.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "gcp_resources": {
+            "description": "Serialized JSON of `gcp_resources` [proto](https://github.com/kubeflow/pipelines/tree/master/components/google-cloud/google_cloud_pipeline_components/proto) which tracks the deploy Model's long-running operation.",
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-preprocess-data-and-split": {
+      "executorLabel": "exec-preprocess-data-and-split",
+      "inputDefinitions": {
+        "parameters": {
+          "data_limit": {
+            "description": "The maximum number of rows to process from the input table.",
+            "parameterType": "NUMBER_INTEGER"
+          },
+          "input_bq_table_id": {
+            "description": "Full ID of the input BigQuery table to preprocess.",
+            "parameterType": "STRING"
+          },
+          "preprocessed_bq_table_id": {
+            "description": "Full ID for the output BigQuery table for preprocessed data.",
+            "parameterType": "STRING"
+          },
+          "project_id": {
+            "description": "The GCP project ID.",
+            "parameterType": "STRING"
+          },
+          "region": {
+            "description": "The GCP region where the pipeline is running (for consistency).",
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "preprocessed_table_id": {
+            "parameterType": "STRING"
+          },
+          "preprocessed_table_uri": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-select-best-model": {
+      "executorLabel": "exec-select-best-model",
+      "inputDefinitions": {
+        "artifacts": {
+          "automl_metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "Metrics from AutoML model evaluation"
+          },
+          "automl_model": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "AutoML model artifact"
+          },
+          "bqml_metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "Metrics from BQML model evaluation"
+          },
+          "bqml_model": {
+            "artifactType": {
+              "schemaTitle": "system.Artifact",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "BQML model artifact"
+          }
+        },
+        "parameters": {
+          "reference_metric_name": {
+            "description": "Metric name to use for comparison (e.g., \"mean_absolute_error\")",
+            "parameterType": "STRING"
+          },
+          "thresholds_dict": {
+            "description": "Dictionary of thresholds for deployment decision",
+            "parameterType": "STRUCT"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "parameters": {
+          "best_metric_value": {
+            "parameterType": "NUMBER_DOUBLE"
+          },
+          "best_model_name": {
+            "parameterType": "STRING"
+          },
+          "deploy_decision": {
+            "parameterType": "STRING"
+          }
+        }
+      }
+    },
+    "comp-tabular-dataset-create": {
+      "executorLabel": "exec-tabular-dataset-create",
+      "inputDefinitions": {
+        "parameters": {
+          "bq_source": {
+            "description": "BigQuery URI to the input table. For example, \"bq://project.dataset.table_name\".",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "display_name": {
+            "description": "The user-defined name of the Dataset. The name can be up to 128 characters long and can be consist of any UTF-8 characters.",
+            "parameterType": "STRING"
+          },
+          "encryption_spec_key_name": {
+            "description": "The Cloud KMS resource identifier of the customer managed encryption key used to protect the Dataset. Has the form: `projects/my-project/locations/my-region/keyRings/my-kr/cryptoKeys/my-key`. The key needs to be in the same region as where the compute resource is created. If set, this Dataset and all sub-resources of this Dataset will be secured by this key. Overrides `encryption_spec_key_name` set in `aiplatform.init`.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "gcs_source": {
+            "description": "Google Cloud Storage URI(-s) to the input file(s). May contain wildcards. For more information on wildcards, see https://cloud.google.com/storage/docs/gsutil/addlhelp/WildcardNames. For example, `\"gs://bucket/file.csv\"` or `[\"gs://bucket/file1.csv\", \"gs://bucket/file2.csv\"]`.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "labels": {
+            "defaultValue": {},
+            "description": "Labels with user-defined metadata to organize your Tensorboards. Label keys and values can be no longer than 64 characters (Unicode codepoints), can only contain lowercase letters, numeric characters, underscores and dashes. International characters are allowed. No more than 64 user labels can be associated with one Tensorboard (System labels are excluded). See https://goo.gl/xmQnxf for more information and examples of labels. System reserved label keys are prefixed with \"aiplatform.googleapis.com/\" and are immutable.",
+            "isOptional": true,
+            "parameterType": "STRUCT"
+          },
+          "location": {
+            "defaultValue": "us-central1",
+            "description": "Optional location to retrieve Dataset from.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          },
+          "project": {
+            "defaultValue": "{{$.pipeline_google_cloud_project_id}}",
+            "description": "Project to retrieve Dataset from. Defaults to the project in which the PipelineJob is run.",
+            "isOptional": true,
+            "parameterType": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "dataset": {
+            "artifactType": {
+              "schemaTitle": "google.VertexDataset",
+              "schemaVersion": "0.0.1"
+            },
+            "description": "Instantiated representation of the managed tabular Dataset resource."
+          }
+        }
+      }
+    }
+  },
+  "defaultPipelineRoot": "gs://baby-mlops-pipeline-bucket/pipeline_root/babyweight-pipeline-2025-py",
+  "deploymentSpec": {
+    "executors": {
+      "exec-automl-tabular-training-job": {
+        "container": {
+          "args": [
+            "--init.project",
+            "{{$.inputs.parameters['project']}}",
+            "--init.location",
+            "{{$.inputs.parameters['location']}}",
+            "--init.display_name",
+            "{{$.inputs.parameters['display_name']}}",
+            "--init.optimization_prediction_type",
+            "{{$.inputs.parameters['optimization_prediction_type']}}",
+            "--method.dataset",
+            "{{$.inputs.artifacts['dataset'].metadata['resourceName']}}",
+            "--method.target_column",
+            "{{$.inputs.parameters['target_column']}}",
+            "{\"IfPresent\": {\"InputName\": \"optimization_objective\", \"Then\": [\"--init.optimization_objective\", \"{{$.inputs.parameters['optimization_objective']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"column_specs\", \"Then\": [\"--init.column_specs\", \"{{$.inputs.parameters['column_specs']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"column_transformations\", \"Then\": [\"--init.column_transformations\", \"{{$.inputs.parameters['column_transformations']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"optimization_objective_recall_value\", \"Then\": [\"--init.optimization_objective_recall_value\", \"{{$.inputs.parameters['optimization_objective_recall_value']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"optimization_objective_precision_value\", \"Then\": [\"--init.optimization_objective_precision_value\", \"{{$.inputs.parameters['optimization_objective_precision_value']}}\"]}}",
+            "--init.labels",
+            "{{$.inputs.parameters['labels']}}",
+            "{\"IfPresent\": {\"InputName\": \"training_encryption_spec_key_name\", \"Then\": [\"--init.training_encryption_spec_key_name\", \"{{$.inputs.parameters['training_encryption_spec_key_name']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"model_encryption_spec_key_name\", \"Then\": [\"--init.model_encryption_spec_key_name\", \"{{$.inputs.parameters['model_encryption_spec_key_name']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"training_fraction_split\", \"Then\": [\"--method.training_fraction_split\", \"{{$.inputs.parameters['training_fraction_split']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"validation_fraction_split\", \"Then\": [\"--method.validation_fraction_split\", \"{{$.inputs.parameters['validation_fraction_split']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"test_fraction_split\", \"Then\": [\"--method.test_fraction_split\", \"{{$.inputs.parameters['test_fraction_split']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"predefined_split_column_name\", \"Then\": [\"--method.predefined_split_column_name\", \"{{$.inputs.parameters['predefined_split_column_name']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"timestamp_split_column_name\", \"Then\": [\"--method.timestamp_split_column_name\", \"{{$.inputs.parameters['timestamp_split_column_name']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"weight_column\", \"Then\": [\"--method.weight_column\", \"{{$.inputs.parameters['weight_column']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"budget_milli_node_hours\", \"Then\": [\"--method.budget_milli_node_hours\", \"{{$.inputs.parameters['budget_milli_node_hours']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"model_display_name\", \"Then\": [\"--method.model_display_name\", \"{{$.inputs.parameters['model_display_name']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"model_labels\", \"Then\": [\"--method.model_labels\", \"{{$.inputs.parameters['model_labels']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"model_id\", \"Then\": [\"--method.model_id\", \"{{$.inputs.parameters['model_id']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"parent_model\", \"Then\": [\"--method.parent_model\", \"{{$.inputs.parameters['parent_model']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"is_default_version\", \"Then\": [\"--method.is_default_version\", \"{{$.inputs.parameters['is_default_version']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"model_version_aliases\", \"Then\": [\"--method.model_version_aliases\", \"{{$.inputs.parameters['model_version_aliases']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"model_version_description\", \"Then\": [\"--method.model_version_description\", \"{{$.inputs.parameters['model_version_description']}}\"]}}",
+            "--method.disable_early_stopping",
+            "{{$.inputs.parameters['disable_early_stopping']}}",
+            "--method.export_evaluated_data_items",
+            "{{$.inputs.parameters['export_evaluated_data_items']}}",
+            "{\"IfPresent\": {\"InputName\": \"export_evaluated_data_items_bigquery_destination_uri\", \"Then\": [\"--method.export_evaluated_data_items_bigquery_destination_uri\", \"{{$.inputs.parameters['export_evaluated_data_items_bigquery_destination_uri']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"export_evaluated_data_items_override_destination\", \"Then\": [\"--method.export_evaluated_data_items_override_destination\", \"{{$.inputs.parameters['export_evaluated_data_items_override_destination']}}\"]}}",
+            "--executor_input",
+            "{{$}}",
+            "--resource_name_output_artifact_uri",
+            "{{$.outputs.artifacts['model'].uri}}"
+          ],
+          "command": [
+            "python3",
+            "-m",
+            "google_cloud_pipeline_components.container.v1.aiplatform.remote_runner",
+            "--cls_name",
+            "AutoMLTabularTrainingJob",
+            "--method_name",
+            "run"
+          ],
+          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.12.0"
+        }
+      },
+      "exec-bigquery-create-model-job": {
+        "container": {
+          "args": [
+            "--type",
+            "BigqueryCreateModelJob",
+            "--project",
+            "{{$.inputs.parameters['project']}}",
+            "--location",
+            "{{$.inputs.parameters['location']}}",
+            "--payload",
+            "{\"Concat\": [\"{\", \"\\\"configuration\\\": {\", \"\\\"query\\\": \", \"{{$.inputs.parameters['job_configuration_query']}}\", \", \\\"labels\\\": \", \"{{$.inputs.parameters['labels']}}\", \"}\", \"}\"]}",
+            "--job_configuration_query_override",
+            "{\"Concat\": [\"{\", \"\\\"query\\\": \\\"\", \"{{$.inputs.parameters['query']}}\", \"\\\"\", \", \\\"query_parameters\\\": \", \"{{$.inputs.parameters['query_parameters']}}\", \"}\"]}",
+            "--gcp_resources",
+            "{{$.outputs.parameters['gcp_resources'].output_file}}",
+            "--executor_input",
+            "{{$}}"
+          ],
+          "command": [
+            "python3",
+            "-u",
+            "-m",
+            "google_cloud_pipeline_components.container.v1.bigquery.create_model.launcher"
+          ],
+          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.12.0"
+        }
+      },
+      "exec-bigquery-evaluate-model-job": {
+        "container": {
+          "args": [
+            "--type",
+            "BigqueryEvaluateModelJob",
+            "--project",
+            "{{$.inputs.parameters['project']}}",
+            "--location",
+            "{{$.inputs.parameters['location']}}",
+            "--model_name",
+            "{\"Concat\": [\"{{$.inputs.artifacts['model'].metadata['projectId']}}\", \".\", \"{{$.inputs.artifacts['model'].metadata['datasetId']}}\", \".\", \"{{$.inputs.artifacts['model'].metadata['modelId']}}\"]}",
+            "--table_name",
+            "{{$.inputs.parameters['table_name']}}",
+            "--query_statement",
+            "{{$.inputs.parameters['query_statement']}}",
+            "--threshold",
+            "{{$.inputs.parameters['threshold']}}",
+            "--payload",
+            "{\"Concat\": [\"{\", \"\\\"configuration\\\": {\", \"\\\"query\\\": \", \"{{$.inputs.parameters['job_configuration_query']}}\", \", \\\"labels\\\": \", \"{{$.inputs.parameters['labels']}}\", \"}\", \"}\"]}",
+            "--job_configuration_query_override",
+            "{\"Concat\": [\"{\", \"\\\"query_parameters\\\": \", \"{{$.inputs.parameters['query_parameters']}}\", \", \\\"destination_encryption_configuration\\\": {\", \"\\\"kmsKeyName\\\": \\\"\", \"{{$.inputs.parameters['encryption_spec_key_name']}}\", \"\\\"}\", \"}\"]}",
+            "--gcp_resources",
+            "{{$.outputs.parameters['gcp_resources'].output_file}}",
+            "--executor_input",
+            "{{$}}"
+          ],
+          "command": [
+            "python3",
+            "-u",
+            "-m",
+            "google_cloud_pipeline_components.container.v1.bigquery.evaluate_model.launcher"
+          ],
+          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.12.0"
+        }
+      },
+      "exec-collect-eval-metrics-automl": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "collect_eval_metrics_automl"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.6.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform>=1.10.0' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef collect_eval_metrics_automl(\n    project_id: str,\n    region: str, \n    model_artifact: Input[Artifact],\n    metrics_output: Output[Metrics]\n) -> NamedTuple(\n    'outputs',[\n        (\"mean_absolute_error\", float),\n        (\"mean_squared_error\", float),\n        (\"root_mean_squared_error\", float),\n        (\"r2_score\", float),\n        (\"median_absolute_error\", float),\n        (\"framework\", str)\n    ]\n):   \n    # Import libraries\n    import google.cloud.aiplatform as aiplatform\n    from google.api_core import exceptions as api_exceptions\n    from collections import namedtuple\n    import json\n    import logging\n    import math\n    import time\n\n    # Configure logging\n    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')\n\n    # Define output metrics structure\n    output_metric_keys = [\"mean_absolute_error\", \"mean_squared_error\", \"root_mean_squared_error\", \"r2_score\", \"median_absolute_error\"]\n    fetched_metrics = {key: 0.0 for key in output_metric_keys}  # Initialize with 0.0 instead of NaN\n    framework = \"AutoML\"\n    OutputsType = namedtuple('outputs', output_metric_keys + [\"framework\"])\n\n    # Get model resource name\n    model_resource_name = model_artifact.metadata.get(\"resourceName\")\n    if not model_resource_name:\n        logging.error(f\"Could not get model resourceName from model artifact metadata: {model_artifact.metadata}\")\n        return OutputsType(**fetched_metrics, framework=framework)\n\n    logging.info(f\"Model resource name: {model_resource_name}\")\n\n    # Initialize the Vertex AI SDK\n    aiplatform.init(project=project_id, location=region)\n\n    try:\n        # Initialize the start time for timeout tracking\n        start_time = time.time()\n        timeout_seconds = 180  # 3 minutes timeout\n\n        logging.info(f\"Attempting to load model: {model_resource_name}\")\n        # Load the model using high-level SDK\n        model = aiplatform.Model(model_name=model_resource_name)\n\n        # Get model evaluations with timeout check\n        logging.info(\"Fetching model evaluations...\")\n        evaluations = []\n        try:\n            # List evaluations with timeout\n            evaluation_iter = model.list_model_evaluations()\n            for eval_item in evaluation_iter:\n                evaluations.append(eval_item)\n                # Check if we've exceeded timeout\n                if time.time() - start_time > timeout_seconds:\n                    logging.warning(f\"Timeout after {timeout_seconds} seconds while listing evaluations\")\n                    break\n\n            logging.info(f\"Found {len(evaluations)} model evaluations\")\n        except Exception as eval_err:\n            logging.error(f\"Error listing evaluations: {eval_err}\")\n            # Continue with empty evaluations list\n\n        # Process evaluations if we have any\n        if evaluations:\n            logging.info(\"Processing first evaluation...\")\n            evaluation = evaluations[0]\n            metrics_dict = evaluation.metrics\n\n            # Define mappings from AutoML metric names to our output names\n            metric_mappings = {\n                \"meanAbsoluteError\": \"mean_absolute_error\",\n                \"rootMeanSquaredError\": \"root_mean_squared_error\",\n                \"rSquared\": \"r2_score\",\n                \"medianAbsoluteError\": \"median_absolute_error\"  # Add mapping for median if it exists\n            }\n\n            # Extract metrics using safe getter function\n            def safe_get_metric(metrics_dict, key, default=0.0):  # Default to 0.0 instead of NaN\n                try:\n                    value = metrics_dict.get(key)\n                    if value is None:\n                        return default\n                    if hasattr(value, 'number_value'):\n                        return float(value.number_value)\n                    return float(value)\n                except (ValueError, TypeError) as e:\n                    logging.warning(f\"Could not convert metric {key}: {e}\")\n                    return default\n\n            # Extract available metrics\n            for automl_key, output_key in metric_mappings.items():\n                value = safe_get_metric(metrics_dict, automl_key)\n                fetched_metrics[output_key] = value\n                logging.info(f\"Extracted {output_key} = {value}\")\n\n            # Calculate MSE from RMSE if available\n            rmse = fetched_metrics.get(\"root_mean_squared_error\")\n            if rmse > 0:\n                mse = rmse ** 2\n                fetched_metrics[\"mean_squared_error\"] = mse\n                logging.info(f\"Calculated MSE = {mse} from RMSE = {rmse}\")\n\n            # Explicitly ensure median_absolute_error is set\n            if \"median_absolute_error\" not in fetched_metrics or fetched_metrics[\"median_absolute_error\"] == 0.0:\n                logging.info(\"Setting median_absolute_error to 0.0 as it was not found in AutoML metrics\")\n                fetched_metrics[\"median_absolute_error\"] = 0.0\n\n            # Log all metrics to KFP UI\n            logging.info(\"Logging metrics to KFP UI...\")\n            for key, value in fetched_metrics.items():\n                metrics_output.log_metric(key, value)\n            metrics_output.log_metric(\"framework\", framework)\n            logging.info(\"Successfully logged all metrics\")\n        else:\n            logging.warning(\"No evaluations found for model\")\n            # Ensure we still set all metrics with explicit default values\n            logging.info(\"Setting all metrics to default values\")\n            for key in output_metric_keys:\n                metrics_output.log_metric(key, 0.0)\n            metrics_output.log_metric(\"framework\", framework)\n\n    except Exception as e:\n        logging.error(f\"Error processing model metrics: {e}\")\n        # Continue to return default metrics\n\n    # Return the metrics, even if they're all 0.0 due to errors\n    logging.info(f\"Returning metrics: {fetched_metrics}\")\n    return OutputsType(**fetched_metrics, framework=framework)\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-collect-eval-metrics-bqml": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "collect_eval_metrics_bqml"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.6.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef collect_eval_metrics_bqml(\n    eval_metrics_artifact: Input[Artifact],\n    metrics: Output[Metrics],\n) -> NamedTuple(\n    'outputs',[\n        (\"mean_absolute_error\", float),\n        (\"mean_squared_error\", float),\n        (\"root_mean_squared_error\", float),\n        (\"r2_score\", float),\n        (\"median_absolute_error\", float),\n        (\"framework\", str)\n    ]\n):    \n    \"\"\"Parses BQML evaluation metrics artifact and returns key metrics individually.\"\"\"\n    import math\n    from collections import namedtuple\n    import json # For printing the full dict if needed\n\n    metadata = eval_metrics_artifact.metadata\n    metrics_dict = {}\n    # Initialize metrics with default values (e.g., NaN or specific error value)\n    mae = float('nan')\n    mse = float('nan')\n    rmse = float('nan')\n    r2 = float('nan') \n    med_ae = float('nan')\n    framework = \"BQML\"\n\n    if not metadata or 'rows' not in metadata or not metadata['rows']:\n        print(\"Warning: Evaluation metrics artifact metadata is empty or missing 'rows'. Returning NaN metrics.\")\n        # Return default/NaN values if metrics can't be parsed\n        Outputs = namedtuple('outputs', [\"mean_absolute_error\", \"mean_squared_error\", \"root_mean_squared_error\", \"r2_score\", \"median_absolute_error\", \"framework\"])\n        return Outputs(mean_absolute_error=mae, mean_squared_error=mse, root_mean_squared_error=rmse, r2_score=r2, median_absolute_error=med_ae, framework=framework)\n\n    # Assuming the structure based on typical BQML EVALUATE output\n    try:\n        schema = metadata[\"schema\"][\"fields\"]\n        # Expecting only one row of results from ML.EVALUATE\n        rows = metadata[\"rows\"][0][\"f\"]\n\n        raw_metrics = {}\n        for metric, value in zip(schema, rows):\n            raw_metrics[metric[\"name\"]] = value[\"v\"] # Store raw values first\n\n        print(f\"Raw metrics extracted: {json.dumps(raw_metrics)}\")\n\n        # Safely extract and convert known metrics\n        def safe_get_float(metric_name):\n            try:\n                return float(raw_metrics.get(metric_name))\n            except (ValueError, TypeError, KeyError):\n                print(f\"Warning: Could not parse or find metric '{metric_name}'.\")\n                return float('nan')\n\n        mae = safe_get_float(\"mean_absolute_error\")\n        mse = safe_get_float(\"mean_squared_error\")\n        r2 = safe_get_float(\"r2_score\")\n        med_ae = safe_get_float(\"median_absolute_error\")\n\n        # Log all extracted metrics to KFP Metrics\n        metrics.log_metric(\"mean_absolute_error\", mae)\n        metrics.log_metric(\"mean_squared_error\", mse)\n        metrics.log_metric(\"r2_score\", r2)\n        metrics.log_metric(\"median_absolute_error\", med_ae)\n\n        if not math.isnan(mse):\n            rmse = math.sqrt(mse)\n            metrics.log_metric(\"root_mean_squared_error\", rmse)\n        else:\n            metrics.log_metric(\"root_mean_squared_error\", float('nan'))\n            rmse = float('nan')\n\n        metrics.log_metric(\"framework\", framework)\n\n    except (KeyError, IndexError, TypeError) as e:\n        print(f\"Error parsing metrics artifact metadata: {e}. Metadata structure might be different. Returning NaN metrics.\")\n        # Fallback to default/NaN values on parsing error\n        Outputs = namedtuple('outputs', [\"mean_absolute_error\", \"mean_squared_error\", \"root_mean_squared_error\", \"r2_score\", \"median_absolute_error\", \"framework\"])\n        return Outputs(mean_absolute_error=mae, mean_squared_error=mse, root_mean_squared_error=rmse, r2_score=r2, median_absolute_error=med_ae, framework=framework)\n\n    print(f\"Processed Metrics - MAE: {mae}, MSE: {mse}, RMSE: {rmse}, R2: {r2}, MedAE: {med_ae}\")\n\n    # Define the output tuple structure again before returning\n    Outputs = namedtuple('outputs', [\"mean_absolute_error\", \"mean_squared_error\", \"root_mean_squared_error\", \"r2_score\", \"median_absolute_error\", \"framework\"])\n\n    # Return individual metrics\n    return Outputs(\n        mean_absolute_error=mae, \n        mean_squared_error=mse, \n        root_mean_squared_error=rmse, \n        r2_score=r2,\n        median_absolute_error=med_ae,\n        framework=framework\n    )\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-construct-vertex-model-resource-name": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "construct_vertex_model_resource_name"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.6.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'google-cloud-aiplatform' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef construct_vertex_model_resource_name(\n    project_id: str,\n    region: str,\n    vertex_model_id: str,\n) -> NamedTuple(\"Outputs\", [(\"vertex_model_resource_name_str\", str)]):\n    \"\"\"Constructs the full Vertex AI Model resource name string.\"\"\"\n    resource_name = f\"projects/{project_id}/locations/{region}/models/{vertex_model_id}\"\n    print(f\"Constructed Vertex AI Model Resource Name: {resource_name}\")\n    return (resource_name,) \n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-endpoint-create": {
+        "container": {
+          "args": [
+            "--type",
+            "CreateEndpoint",
+            "--payload",
+            "{\"Concat\": [\"{\", \"\\\"display_name\\\": \\\"\", \"{{$.inputs.parameters['display_name']}}\", \"\\\"\", \", \\\"description\\\": \\\"\", \"{{$.inputs.parameters['description']}}\", \"\\\"\", \", \\\"labels\\\": \", \"{{$.inputs.parameters['labels']}}\", \", \\\"encryption_spec\\\": {\\\"kms_key_name\\\":\\\"\", \"{{$.inputs.parameters['encryption_spec_key_name']}}\", \"\\\"}\", \", \\\"network\\\": \\\"\", \"{{$.inputs.parameters['network']}}\", \"\\\"\", \"}\"]}",
+            "--project",
+            "{{$.inputs.parameters['project']}}",
+            "--location",
+            "{{$.inputs.parameters['location']}}",
+            "--gcp_resources",
+            "{{$.outputs.parameters['gcp_resources'].output_file}}",
+            "--executor_input",
+            "{{$}}"
+          ],
+          "command": [
+            "python3",
+            "-u",
+            "-m",
+            "google_cloud_pipeline_components.container.v1.endpoint.create_endpoint.launcher"
+          ],
+          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.12.0"
+        }
+      },
+      "exec-extract-source-data": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "extract_source_data"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.6.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'google-cloud-bigquery>=3.0.0' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef extract_source_data(\n    project_id: str,\n    source_bq_table_id: str,\n    extracted_bq_table_id: str,\n    filter_year: int,\n    region: str,  # Though not directly used by BQ client for multi-region, good for consistency\n) -> NamedTuple('outputs', [('extracted_table_uri', str), ('extracted_table_id', str)]):\n    \"\"\"Extracts and filters data from a source BigQuery table.\n\n    Args:\n        project_id: The GCP project ID.\n        source_bq_table_id: Full ID of the source BigQuery table (e.g., project.dataset.table).\n        extracted_bq_table_id: Full ID for the output BigQuery table for extracted data.\n        filter_year: The year used to filter the data (e.g., data > filter_year).\n        region: The GCP region where the pipeline is running (for consistency).\n\n    Returns:\n        NamedTuple with:\n            extracted_table_uri: The URI of the newly created extracted table.\n            extracted_table_id: The ID of the newly created extracted table.\n    \"\"\"\n    import logging # Ensure logging is imported within the component function\n    from google.cloud import bigquery\n    import json\n    from collections import namedtuple # Keep for instantiation\n\n    # Basic configuration for logging within this component\n    # This ensures logs from this component are formatted and have a level set.\n    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')\n\n    logging.info(f\"Starting data extraction from {source_bq_table_id}\")\n    logging.info(f\"Project ID: {project_id}, Output Table: {extracted_bq_table_id}\")\n    logging.info(f\"Filtering data for year > {filter_year}\")\n    logging.info(f\"Using region: {region} (should be US for public dataset access)\")\n\n    bq_client = bigquery.Client(project=project_id)\n\n    # First ensure the dataset exists with US location\n    dataset_id = extracted_bq_table_id.split('.')[1]  # Get the dataset name from the full table ID\n    dataset_ref = bigquery.DatasetReference(project_id, dataset_id)\n\n    try:\n        # Try to get the dataset to check if it exists\n        dataset = bq_client.get_dataset(dataset_ref)\n        logging.info(f\"Dataset {dataset_id} already exists with location: {dataset.location}\")\n        if dataset.location != \"US\":\n            logging.warning(f\"Dataset location is {dataset.location}, not US as required for public dataset access\")\n    except Exception as e:\n        # Dataset doesn't exist, create it\n        logging.info(f\"Creating dataset {dataset_id} in US location\")\n        dataset = bigquery.Dataset(dataset_ref)\n        dataset.location = \"US\"  # Set the location to US multi-region\n        dataset = bq_client.create_dataset(dataset, exists_ok=True)\n        logging.info(f\"Dataset {dataset_id} created with location: {dataset.location}\")\n\n    query = f\"\"\"\n    CREATE OR REPLACE TABLE `{extracted_bq_table_id}` AS (\n    SELECT\n        weight_pounds,\n        is_male,\n        mother_age,\n        plurality,\n        gestation_weeks,\n        cigarette_use,\n        alcohol_use,\n        year,\n        month,\n        wday,\n        state,\n        mother_birth_state\n    FROM\n        `{source_bq_table_id}`\n    WHERE\n        year > {filter_year}\n        AND weight_pounds > 0\n        AND mother_age > 0\n        AND plurality > 0\n        AND gestation_weeks > 19\n    );\n    \"\"\"\n\n    logging.info(\"Executing BigQuery job for data extraction...\")\n    try:\n        # Always use US location for the job to access public dataset\n        logging.info(f\"Explicitly setting job location to US for public dataset access\")\n        job_config = bigquery.QueryJobConfig()\n        query_job = bq_client.query(query, job_config=job_config, location=\"US\")\n        query_job.result()  # Wait for the job to complete\n        logging.info(\n            f\"Successfully extracted data to {extracted_bq_table_id}. Job ID: {query_job.job_id}\"\n        )\n    except Exception as e:\n        logging.error(f\"BigQuery job failed: {e}\")\n        raise\n\n    # Create output values\n    extracted_table_uri_val = f\"bq://{extracted_bq_table_id}\"\n    extracted_table_id_val = extracted_bq_table_id\n\n    # Log the outputs for debugging\n    logging.info(f\"Output - extracted_table_uri: {extracted_table_uri_val}\")\n    logging.info(f\"Output - extracted_table_id: {extracted_table_id_val}\")\n\n    # Instantiate the inline NamedTuple for return\n    Outputs = namedtuple('outputs', ['extracted_table_uri', 'extracted_table_id'])\n    return Outputs(extracted_table_uri=extracted_table_uri_val, extracted_table_id=extracted_table_id_val)\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-importer": {
+        "importer": {
+          "artifactUri": {
+            "runtimeParameter": "uri"
+          },
+          "metadata": {
+            "resourceName": "{{$.inputs.parameters['metadata']}}"
+          },
+          "typeSchema": {
+            "schemaTitle": "google.VertexModel",
+            "schemaVersion": "0.0.1"
+          }
+        }
+      },
+      "exec-model-deploy": {
+        "container": {
+          "args": [
+            "--type",
+            "DeployModel",
+            "--payload",
+            "{\"Concat\": [\"{\", \"\\\"endpoint\\\": \\\"\", \"{{$.inputs.artifacts['endpoint'].metadata['resourceName']}}\", \"\\\"\", \", \\\"traffic_split\\\": \", \"{{$.inputs.parameters['traffic_split']}}\", \", \\\"deployed_model\\\": {\", \"\\\"model\\\": \\\"\", \"{{$.inputs.artifacts['model'].metadata['resourceName']}}\", \"\\\"\", \", \\\"dedicated_resources\\\": {\", \"\\\"machine_spec\\\": {\", \"\\\"machine_type\\\": \\\"\", \"{{$.inputs.parameters['dedicated_resources_machine_type']}}\", \"\\\"\", \", \\\"accelerator_type\\\": \\\"\", \"{{$.inputs.parameters['dedicated_resources_accelerator_type']}}\", \"\\\"\", \", \\\"accelerator_count\\\": \", \"{{$.inputs.parameters['dedicated_resources_accelerator_count']}}\", \"}\", \", \\\"min_replica_count\\\": \", \"{{$.inputs.parameters['dedicated_resources_min_replica_count']}}\", \", \\\"max_replica_count\\\": \", \"{{$.inputs.parameters['dedicated_resources_max_replica_count']}}\", \"}\", \", \\\"automatic_resources\\\": {\", \"\\\"min_replica_count\\\": \", \"{{$.inputs.parameters['automatic_resources_min_replica_count']}}\", \", \\\"max_replica_count\\\": \", \"{{$.inputs.parameters['automatic_resources_max_replica_count']}}\", \"}\", \", \\\"service_account\\\": \\\"\", \"{{$.inputs.parameters['service_account']}}\", \"\\\"\", \", \\\"disable_container_logging\\\": \", \"{{$.inputs.parameters['disable_container_logging']}}\", \", \\\"enable_access_logging\\\": \", \"{{$.inputs.parameters['enable_access_logging']}}\", \", \\\"explanation_spec\\\": {\", \"\\\"parameters\\\": \", \"{{$.inputs.parameters['explanation_parameters']}}\", \", \\\"metadata\\\": \", \"{{$.inputs.parameters['explanation_metadata']}}\", \"}\", \"}\", \"}\"]}",
+            "--project",
+            "",
+            "--location",
+            "",
+            "--gcp_resources",
+            "{{$.outputs.parameters['gcp_resources'].output_file}}"
+          ],
+          "command": [
+            "python3",
+            "-u",
+            "-m",
+            "google_cloud_pipeline_components.container.v1.endpoint.deploy_model.launcher"
+          ],
+          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.12.0"
+        }
+      },
+      "exec-model-deploy-2": {
+        "container": {
+          "args": [
+            "--type",
+            "DeployModel",
+            "--payload",
+            "{\"Concat\": [\"{\", \"\\\"endpoint\\\": \\\"\", \"{{$.inputs.artifacts['endpoint'].metadata['resourceName']}}\", \"\\\"\", \", \\\"traffic_split\\\": \", \"{{$.inputs.parameters['traffic_split']}}\", \", \\\"deployed_model\\\": {\", \"\\\"model\\\": \\\"\", \"{{$.inputs.artifacts['model'].metadata['resourceName']}}\", \"\\\"\", \", \\\"dedicated_resources\\\": {\", \"\\\"machine_spec\\\": {\", \"\\\"machine_type\\\": \\\"\", \"{{$.inputs.parameters['dedicated_resources_machine_type']}}\", \"\\\"\", \", \\\"accelerator_type\\\": \\\"\", \"{{$.inputs.parameters['dedicated_resources_accelerator_type']}}\", \"\\\"\", \", \\\"accelerator_count\\\": \", \"{{$.inputs.parameters['dedicated_resources_accelerator_count']}}\", \"}\", \", \\\"min_replica_count\\\": \", \"{{$.inputs.parameters['dedicated_resources_min_replica_count']}}\", \", \\\"max_replica_count\\\": \", \"{{$.inputs.parameters['dedicated_resources_max_replica_count']}}\", \"}\", \", \\\"automatic_resources\\\": {\", \"\\\"min_replica_count\\\": \", \"{{$.inputs.parameters['automatic_resources_min_replica_count']}}\", \", \\\"max_replica_count\\\": \", \"{{$.inputs.parameters['automatic_resources_max_replica_count']}}\", \"}\", \", \\\"service_account\\\": \\\"\", \"{{$.inputs.parameters['service_account']}}\", \"\\\"\", \", \\\"disable_container_logging\\\": \", \"{{$.inputs.parameters['disable_container_logging']}}\", \", \\\"enable_access_logging\\\": \", \"{{$.inputs.parameters['enable_access_logging']}}\", \", \\\"explanation_spec\\\": {\", \"\\\"parameters\\\": \", \"{{$.inputs.parameters['explanation_parameters']}}\", \", \\\"metadata\\\": \", \"{{$.inputs.parameters['explanation_metadata']}}\", \"}\", \"}\", \"}\"]}",
+            "--project",
+            "",
+            "--location",
+            "",
+            "--gcp_resources",
+            "{{$.outputs.parameters['gcp_resources'].output_file}}"
+          ],
+          "command": [
+            "python3",
+            "-u",
+            "-m",
+            "google_cloud_pipeline_components.container.v1.endpoint.deploy_model.launcher"
+          ],
+          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.12.0"
+        }
+      },
+      "exec-preprocess-data-and-split": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "preprocess_data_and_split"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.6.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"'  &&  python3 -m pip install --quiet --no-warn-script-location 'google-cloud-bigquery>=3.0.0' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef preprocess_data_and_split(\n    project_id: str,\n    input_bq_table_id: str,\n    preprocessed_bq_table_id: str,\n    data_limit: int,\n    region: str,  # Though not directly used by BQ client, good for consistency\n) -> NamedTuple('outputs', [('preprocessed_table_uri', str), ('preprocessed_table_id', str)]):\n    \"\"\"Preprocesses data and splits it into TRAIN, VALIDATE, and TEST sets.\n\n    Args:\n        project_id: The GCP project ID.\n        input_bq_table_id: Full ID of the input BigQuery table to preprocess.\n        preprocessed_bq_table_id: Full ID for the output BigQuery table for preprocessed data.\n        data_limit: The maximum number of rows to process from the input table.\n        region: The GCP region where the pipeline is running (for consistency).\n\n    Returns:\n        NamedTuple with:\n            preprocessed_table_uri: URI of the newly created preprocessed table.\n            preprocessed_table_id: ID of the newly created preprocessed table.\n    \"\"\"\n    import logging # Ensure logging is imported within the component function\n    from google.cloud import bigquery\n    import json\n    from collections import namedtuple # Keep for instantiation\n\n    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')\n\n    logging.info(f\"Starting data preprocessing for {input_bq_table_id}\")\n    logging.info(f\"Project ID: {project_id}, Output Table: {preprocessed_bq_table_id}\")\n    logging.info(f\"Applying data limit: {data_limit}\")\n    logging.info(f\"Using region: {region}\")\n\n    bq_client = bigquery.Client(project=project_id)\n\n    # First ensure the dataset exists with correct location\n    dataset_id = preprocessed_bq_table_id.split('.')[1]  # Get the dataset name from the full table ID\n    dataset_ref = bigquery.DatasetReference(project_id, dataset_id)\n\n    try:\n        # Try to get the dataset to check if it exists\n        dataset = bq_client.get_dataset(dataset_ref)\n        logging.info(f\"Dataset {dataset_id} already exists with location: {dataset.location}\")\n    except Exception as e:\n        # Dataset doesn't exist, create it\n        logging.info(f\"Creating dataset {dataset_id} with location {region}\")\n        dataset = bigquery.Dataset(dataset_ref)\n        dataset.location = region\n        dataset = bq_client.create_dataset(dataset, exists_ok=True)\n        logging.info(f\"Dataset {dataset_id} created with location: {dataset.location}\")\n\n    query = f\"\"\"\n    CREATE OR REPLACE TABLE `{preprocessed_bq_table_id}` AS (\n        WITH all_hash_limit AS (\n            SELECT\n                weight_pounds,\n                CAST(is_male AS STRING) AS is_male,\n                mother_age,\n                CASE\n                    WHEN plurality = 1 THEN \"Single(1)\"\n                    WHEN plurality = 2 THEN \"Twins(2)\"\n                    WHEN plurality = 3 THEN \"Triplets(3)\"\n                    WHEN plurality = 4 THEN \"Quadruplets(4)\"\n                    WHEN plurality = 5 THEN \"Quintuplets(5)\"\n                    ELSE CAST(plurality AS STRING)  -- Keep original if not in specific cases\n                END AS plurality_category, -- Renamed for clarity\n                gestation_weeks,\n                IFNULL(CAST(cigarette_use AS STRING), \"Unknown\") AS cigarette_use_str,\n                IFNULL(CAST(alcohol_use AS STRING), \"Unknown\") AS alcohol_use_str,\n                -- Create a hash for reproducible splitting\n                ABS(FARM_FINGERPRINT(\n                    CONCAT(\n                        CAST(year AS STRING),\n                        CAST(month AS STRING),\n                        CAST(COALESCE(wday, 0) AS STRING), -- Handle potential NULL wday\n                        CAST(IFNULL(state, \"Unknown\") AS STRING),\n                        CAST(IFNULL(mother_birth_state, \"Unknown\") AS STRING)\n                    )\n                )) AS hash_values\n            FROM\n                `{input_bq_table_id}`\n            LIMIT {data_limit}\n        )\n        SELECT\n            * EXCEPT(hash_values), -- Exclude the temporary hash column\n            -- Create data splits (approx. 80% TRAIN, 10% VALIDATE, 10% TEST)\n            CASE\n                WHEN MOD(hash_values, 10) < 8 THEN \"TRAIN\"\n                WHEN MOD(hash_values, 10) = 8 THEN \"VALIDATE\" -- Use = 8 for 10%\n                ELSE \"TEST\"\n            END AS data_split\n        FROM all_hash_limit\n    );\n    \"\"\"\n\n    logging.info(\"Executing BigQuery job for data preprocessing and splitting...\")\n    try:\n        # Use the same region as the input table's dataset\n        input_dataset_id = input_bq_table_id.split('.')[1]\n        input_dataset = bq_client.get_dataset(bigquery.DatasetReference(project_id, input_dataset_id))\n        location = input_dataset.location\n        logging.info(f\"Using location {location} for preprocessing job (matches input dataset)\")\n\n        job_config = bigquery.QueryJobConfig()\n        query_job = bq_client.query(query, location=location, job_config=job_config)\n        query_job.result()  # Wait for the job to complete\n        logging.info(\n            f\"Successfully preprocessed data to {preprocessed_bq_table_id}. Job ID: {query_job.job_id}\"\n        )\n    except Exception as e:\n        logging.error(f\"BigQuery job failed: {e}\")\n        raise\n\n    # Create output values\n    preprocessed_table_uri_val = f\"bq://{preprocessed_bq_table_id}\"\n    preprocessed_table_id_val = preprocessed_bq_table_id\n\n    # Log the outputs for debugging\n    logging.info(f\"Output - preprocessed_table_uri: {preprocessed_table_uri_val}\")\n    logging.info(f\"Output - preprocessed_table_id: {preprocessed_table_id_val}\")\n\n    # Instantiate the inline NamedTuple for return\n    Outputs = namedtuple('outputs', ['preprocessed_table_uri', 'preprocessed_table_id'])\n    return Outputs(preprocessed_table_uri=preprocessed_table_uri_val, preprocessed_table_id=preprocessed_table_id_val)\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-select-best-model": {
+        "container": {
+          "args": [
+            "--executor_input",
+            "{{$}}",
+            "--function_to_execute",
+            "select_best_model"
+          ],
+          "command": [
+            "sh",
+            "-c",
+            "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet --no-warn-script-location 'kfp==2.6.0' '--no-deps' 'typing-extensions>=3.7.4,<5; python_version<\"3.9\"' && \"$0\" \"$@\"\n",
+            "sh",
+            "-ec",
+            "program_path=$(mktemp -d)\n\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\n_KFP_RUNTIME=true python3 -m kfp.dsl.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+            "\nimport kfp\nfrom kfp import dsl\nfrom kfp.dsl import *\nfrom typing import *\n\ndef select_best_model(\n    automl_metrics: Input[Metrics],\n    automl_model: Input[Artifact],\n    bqml_metrics: Input[Metrics],\n    bqml_model: Input[Artifact],\n    reference_metric_name: str,\n    thresholds_dict: dict\n) -> NamedTuple(\n    \"Outputs\",[\n        (\"deploy_decision\", str),\n        (\"best_model_name\", str),\n        (\"best_metric_value\", float),\n    ],\n):\n    \"\"\"Selects the best model between BQML and AutoML based on specified metric.\n\n    Args:\n        automl_metrics: Metrics from AutoML model evaluation\n        automl_model: AutoML model artifact\n        bqml_metrics: Metrics from BQML model evaluation\n        bqml_model: BQML model artifact\n        reference_metric_name: Metric name to use for comparison (e.g., \"mean_absolute_error\")\n        thresholds_dict: Dictionary of thresholds for deployment decision\n\n    Returns:\n        NamedTuple with deploy_decision, best_model_name, and best_metric_value\n    \"\"\"\n    import logging\n    from collections import namedtuple\n\n    # Configure logging\n    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')\n\n    # Standardized metric names used in both BQML and AutoML components\n    standard_metric_names = [\n        \"mean_absolute_error\",\n        \"mean_squared_error\",\n        \"root_mean_squared_error\",\n        \"r2_score\",\n        \"median_absolute_error\"\n    ]\n\n    # Validate reference metric name\n    if reference_metric_name not in standard_metric_names:\n        logging.warning(f\"Reference metric {reference_metric_name} not in standard metrics: {standard_metric_names}\")\n        logging.info(f\"Defaulting to 'mean_absolute_error' as reference metric\")\n        reference_metric_name = \"mean_absolute_error\"\n\n    # For metrics where lower is better\n    lower_is_better = [\"mean_absolute_error\", \"mean_squared_error\", \"root_mean_squared_error\", \"median_absolute_error\"]\n    # For metrics where higher is better\n    higher_is_better = [\"r2_score\"]\n\n    logging.info(f\"Comparing models using metric: {reference_metric_name}\")\n    logging.info(f\"AutoML metrics metadata: {automl_metrics.metadata}\")\n    logging.info(f\"BQML metrics metadata: {bqml_metrics.metadata}\")\n\n    # Function to safely extract metric value\n    def get_metric_value(metrics_artifact, metric_name, default=None):\n        try:\n            # Try to get from metadata directly\n            if metric_name in metrics_artifact.metadata:\n                value = float(metrics_artifact.metadata[metric_name])\n                logging.info(f\"Found {metric_name} = {value} in metadata\")\n                return value\n\n            # Try to get through KFP metrics method if available\n            metrics_dict = getattr(metrics_artifact, \"metrics\", {})\n            if metrics_dict and metric_name in metrics_dict:\n                value = float(metrics_dict[metric_name])\n                logging.info(f\"Found {metric_name} = {value} in metrics dict\")\n                return value\n\n            logging.warning(f\"Metric {metric_name} not found in artifact\")\n            return default\n        except (TypeError, ValueError) as e:\n            logging.error(f\"Error extracting {metric_name}: {e}\")\n            return default\n\n    # Extract metrics from both models\n    bqml_metric_value = get_metric_value(bqml_metrics, reference_metric_name, float('inf'))\n    automl_metric_value = get_metric_value(automl_metrics, reference_metric_name, float('inf'))\n\n    logging.info(f\"BQML {reference_metric_name}: {bqml_metric_value}\")\n    logging.info(f\"AutoML {reference_metric_name}: {automl_metric_value}\")\n\n    # Determine which model is better based on the metric\n    if reference_metric_name in lower_is_better:\n        is_bqml_better = bqml_metric_value <= automl_metric_value\n    else:  # higher_is_better\n        is_bqml_better = bqml_metric_value >= automl_metric_value\n\n    # Select the best model\n    if is_bqml_better:\n        best_model_name = \"BQML\"\n        best_metric_value = bqml_metric_value\n        logging.info(f\"BQML model is better with {reference_metric_name} = {best_metric_value}\")\n    else:\n        best_model_name = \"AutoML\"\n        best_metric_value = automl_metric_value\n        logging.info(f\"AutoML model is better with {reference_metric_name} = {best_metric_value}\")\n\n    # Determine deployment decision based on threshold\n    threshold = thresholds_dict.get(reference_metric_name, float('inf'))\n\n    if reference_metric_name in lower_is_better:\n        deploy_decision = \"true\" if best_metric_value < threshold else \"false\"\n    else:  # higher_is_better\n        deploy_decision = \"true\" if best_metric_value > threshold else \"false\"\n\n    # Log the decision\n    logging.info(f\"Best model: {best_model_name}\")\n    logging.info(f\"Best {reference_metric_name}: {best_metric_value}\")\n    logging.info(f\"Threshold for {reference_metric_name}: {threshold}\")\n    logging.info(f\"Deploy decision: {deploy_decision}\")\n\n    # Return named tuple with results\n    outputs = namedtuple(\"Outputs\", [\"deploy_decision\", \"best_model_name\", \"best_metric_value\"])\n    return outputs(deploy_decision, best_model_name, best_metric_value)\n\n"
+          ],
+          "image": "python:3.10"
+        }
+      },
+      "exec-tabular-dataset-create": {
+        "container": {
+          "args": [
+            "--method.project",
+            "{{$.inputs.parameters['project']}}",
+            "--method.location",
+            "{{$.inputs.parameters['location']}}",
+            "--method.display_name",
+            "{{$.inputs.parameters['display_name']}}",
+            "{\"IfPresent\": {\"InputName\": \"gcs_source\", \"Then\": [\"--method.gcs_source\", \"{{$.inputs.parameters['gcs_source']}}\"]}}",
+            "{\"IfPresent\": {\"InputName\": \"bq_source\", \"Then\": [\"--method.bq_source\", \"{{$.inputs.parameters['bq_source']}}\"]}}",
+            "--method.labels",
+            "{{$.inputs.parameters['labels']}}",
+            "{\"IfPresent\": {\"InputName\": \"encryption_spec_key_name\", \"Then\": [\"--method.encryption_spec_key_name\", \"{{$.inputs.parameters['encryption_spec_key_name']}}\"]}}",
+            "--executor_input",
+            "{{$}}",
+            "--resource_name_output_artifact_uri",
+            "{{$.outputs.artifacts['dataset'].uri}}"
+          ],
+          "command": [
+            "python3",
+            "-m",
+            "google_cloud_pipeline_components.container.v1.aiplatform.remote_runner",
+            "--cls_name",
+            "TabularDataset",
+            "--method_name",
+            "create"
+          ],
+          "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:2.12.0"
+        }
+      }
+    }
+  },
+  "pipelineInfo": {
+    "description": "Modernized baby weight pipeline with data prep, BQML & AutoML training, and evaluation.",
+    "name": "babyweight-pipeline-2025-py-bqml-automl-train-eval"
+  },
+  "root": {
+    "dag": {
+      "outputs": {
+        "artifacts": {
+          "collect-eval-metrics-automl-metrics_output": {
+            "artifactSelectors": [
+              {
+                "outputArtifactKey": "metrics_output",
+                "producerSubtask": "collect-eval-metrics-automl"
+              }
+            ]
+          },
+          "collect-eval-metrics-bqml-metrics": {
+            "artifactSelectors": [
+              {
+                "outputArtifactKey": "metrics",
+                "producerSubtask": "collect-eval-metrics-bqml"
+              }
+            ]
+          }
+        }
+      },
+      "tasks": {
+        "automl-tabular-training-job": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-automl-tabular-training-job"
+          },
+          "dependentTasks": [
+            "tabular-dataset-create"
+          ],
+          "inputs": {
+            "artifacts": {
+              "dataset": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "dataset",
+                  "producerTask": "tabular-dataset-create"
+                }
+              }
+            },
+            "parameters": {
+              "budget_milli_node_hours": {
+                "componentInputParameter": "automl_budget_milli_node_hours"
+              },
+              "column_specs": {
+                "componentInputParameter": "automl_column_specs"
+              },
+              "display_name": {
+                "componentInputParameter": "automl_training_job_display_name"
+              },
+              "location": {
+                "componentInputParameter": "region"
+              },
+              "model_display_name": {
+                "componentInputParameter": "automl_model_display_name_param"
+              },
+              "optimization_objective": {
+                "runtimeValue": {
+                  "constant": "minimize-rmse"
+                }
+              },
+              "optimization_prediction_type": {
+                "runtimeValue": {
+                  "constant": "regression"
+                }
+              },
+              "project": {
+                "componentInputParameter": "project_id"
+              },
+              "target_column": {
+                "componentInputParameter": "var_target"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Train AutoML Model"
+          }
+        },
+        "bigquery-create-model-job": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-bigquery-create-model-job"
+          },
+          "dependentTasks": [
+            "preprocess-data-and-split"
+          ],
+          "inputs": {
+            "parameters": {
+              "location": {
+                "componentInputParameter": "bq_location"
+              },
+              "pipelinechannel--bqml_model_name": {
+                "componentInputParameter": "bqml_model_name"
+              },
+              "pipelinechannel--formatted_bqml_model_version_aliases": {
+                "componentInputParameter": "formatted_bqml_model_version_aliases"
+              },
+              "pipelinechannel--preprocess-data-and-split-preprocessed_table_id": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "preprocessed_table_id",
+                  "producerTask": "preprocess-data-and-split"
+                }
+              },
+              "pipelinechannel--project_id": {
+                "componentInputParameter": "project_id"
+              },
+              "pipelinechannel--var_target": {
+                "componentInputParameter": "var_target"
+              },
+              "project": {
+                "componentInputParameter": "project_id"
+              },
+              "query": {
+                "runtimeValue": {
+                  "constant": "\n    CREATE MODEL IF NOT EXISTS `{{$.inputs.parameters['pipelinechannel--project_id']}}.baby_mlops_data_staging.{{$.inputs.parameters['pipelinechannel--bqml_model_name']}}`\n    OPTIONS(\n        model_type = 'DNN_LINEAR_COMBINED_REGRESSOR',\n        model_registry = 'vertex_ai',\n        vertex_ai_model_id = '{{$.inputs.parameters['pipelinechannel--bqml_model_name']}}-cached',\n        vertex_ai_model_version_aliases = {{$.inputs.parameters['pipelinechannel--formatted_bqml_model_version_aliases']}},\n        input_label_cols = ['{{$.inputs.parameters['pipelinechannel--var_target']}}'],\n        data_split_col = 'custom_splits',\n        data_split_method = 'CUSTOM',\n        HIDDEN_UNITS = [256, 128, 64],\n        OPTIMIZER = 'adagrad',\n        BATCH_SIZE = HPARAM_CANDIDATES([16, 32, 64]),\n        DROPOUT =  HPARAM_CANDIDATES([0, 0.1, 0.2]),\n        MAX_ITERATIONS = 5,\n        MAX_PARALLEL_TRIALS = 4,\n        NUM_TRIALS = 24\n        ) AS\n    SELECT * EXCEPT(data_split),\n        CASE\n            WHEN data_split = 'VALIDATE' THEN 'EVAL'\n            ELSE data_split\n        END AS custom_splits\n    FROM `{{$.inputs.parameters['pipelinechannel--preprocess-data-and-split-preprocessed_table_id']}}`\n    "
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Train BQML Model"
+          }
+        },
+        "bigquery-evaluate-model-job": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-bigquery-evaluate-model-job"
+          },
+          "dependentTasks": [
+            "bigquery-create-model-job"
+          ],
+          "inputs": {
+            "artifacts": {
+              "model": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "model",
+                  "producerTask": "bigquery-create-model-job"
+                }
+              }
+            },
+            "parameters": {
+              "location": {
+                "componentInputParameter": "bq_location"
+              },
+              "project": {
+                "componentInputParameter": "project_id"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Evaluate BQML Model"
+          }
+        },
+        "collect-eval-metrics-automl": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-collect-eval-metrics-automl"
+          },
+          "dependentTasks": [
+            "automl-tabular-training-job"
+          ],
+          "inputs": {
+            "artifacts": {
+              "model_artifact": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "model",
+                  "producerTask": "automl-tabular-training-job"
+                }
+              }
+            },
+            "parameters": {
+              "project_id": {
+                "componentInputParameter": "project_id"
+              },
+              "region": {
+                "componentInputParameter": "region"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Collect AutoML Metrics"
+          }
+        },
+        "collect-eval-metrics-bqml": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-collect-eval-metrics-bqml"
+          },
+          "dependentTasks": [
+            "bigquery-evaluate-model-job"
+          ],
+          "inputs": {
+            "artifacts": {
+              "eval_metrics_artifact": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "evaluation_metrics",
+                  "producerTask": "bigquery-evaluate-model-job"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Collect BQML Metrics"
+          }
+        },
+        "condition-1": {
+          "componentRef": {
+            "name": "comp-condition-1"
+          },
+          "dependentTasks": [
+            "automl-tabular-training-job",
+            "endpoint-create",
+            "importer",
+            "select-best-model"
+          ],
+          "inputs": {
+            "artifacts": {
+              "pipelinechannel--automl-tabular-training-job-model": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "model",
+                  "producerTask": "automl-tabular-training-job"
+                }
+              },
+              "pipelinechannel--endpoint-create-endpoint": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "endpoint",
+                  "producerTask": "endpoint-create"
+                }
+              },
+              "pipelinechannel--importer-artifact": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "artifact",
+                  "producerTask": "importer"
+                }
+              }
+            },
+            "parameters": {
+              "pipelinechannel--deploy_machine_type": {
+                "componentInputParameter": "deploy_machine_type"
+              },
+              "pipelinechannel--deploy_max_replica_count": {
+                "componentInputParameter": "deploy_max_replica_count"
+              },
+              "pipelinechannel--deploy_min_replica_count": {
+                "componentInputParameter": "deploy_min_replica_count"
+              },
+              "pipelinechannel--select-best-model-best_model_name": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "best_model_name",
+                  "producerTask": "select-best-model"
+                }
+              },
+              "pipelinechannel--select-best-model-deploy_decision": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "deploy_decision",
+                  "producerTask": "select-best-model"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "deploy_decision"
+          },
+          "triggerPolicy": {
+            "condition": "inputs.parameter_values['pipelinechannel--select-best-model-deploy_decision'] == 'true'"
+          }
+        },
+        "construct-vertex-model-resource-name": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-construct-vertex-model-resource-name"
+          },
+          "dependentTasks": [
+            "bigquery-create-model-job"
+          ],
+          "inputs": {
+            "parameters": {
+              "pipelinechannel--bqml_model_name": {
+                "componentInputParameter": "bqml_model_name"
+              },
+              "project_id": {
+                "componentInputParameter": "project_id"
+              },
+              "region": {
+                "componentInputParameter": "region"
+              },
+              "vertex_model_id": {
+                "runtimeValue": {
+                  "constant": "{{$.inputs.parameters['pipelinechannel--bqml_model_name']}}-cached"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Construct Vertex Model Name"
+          }
+        },
+        "endpoint-create": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-endpoint-create"
+          },
+          "inputs": {
+            "parameters": {
+              "display_name": {
+                "componentInputParameter": "endpoint_display_name"
+              },
+              "location": {
+                "componentInputParameter": "region"
+              },
+              "project": {
+                "componentInputParameter": "project_id"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Create Endpoint"
+          }
+        },
+        "extract-source-data": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-extract-source-data"
+          },
+          "inputs": {
+            "parameters": {
+              "extracted_bq_table_id": {
+                "componentInputParameter": "extracted_bq_table_full_id"
+              },
+              "filter_year": {
+                "componentInputParameter": "data_extraction_year"
+              },
+              "project_id": {
+                "componentInputParameter": "project_id"
+              },
+              "region": {
+                "runtimeValue": {
+                  "constant": "US"
+                }
+              },
+              "source_bq_table_id": {
+                "componentInputParameter": "source_bq_table"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Extract Source Data"
+          }
+        },
+        "importer": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-importer"
+          },
+          "dependentTasks": [
+            "construct-vertex-model-resource-name"
+          ],
+          "inputs": {
+            "parameters": {
+              "metadata": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "vertex_model_resource_name_str",
+                  "producerTask": "construct-vertex-model-resource-name"
+                }
+              },
+              "uri": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "vertex_model_resource_name_str",
+                  "producerTask": "construct-vertex-model-resource-name"
+                }
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Import BQML as VertexModel Artifact"
+          }
+        },
+        "preprocess-data-and-split": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-preprocess-data-and-split"
+          },
+          "dependentTasks": [
+            "extract-source-data"
+          ],
+          "inputs": {
+            "parameters": {
+              "data_limit": {
+                "componentInputParameter": "data_preprocessing_limit"
+              },
+              "input_bq_table_id": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "extracted_table_id",
+                  "producerTask": "extract-source-data"
+                }
+              },
+              "preprocessed_bq_table_id": {
+                "componentInputParameter": "prepped_bq_table_full_id"
+              },
+              "project_id": {
+                "componentInputParameter": "project_id"
+              },
+              "region": {
+                "componentInputParameter": "bq_location"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Preprocess and Split Data"
+          }
+        },
+        "select-best-model": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-select-best-model"
+          },
+          "dependentTasks": [
+            "automl-tabular-training-job",
+            "bigquery-create-model-job",
+            "collect-eval-metrics-automl",
+            "collect-eval-metrics-bqml"
+          ],
+          "inputs": {
+            "artifacts": {
+              "automl_metrics": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "metrics_output",
+                  "producerTask": "collect-eval-metrics-automl"
+                }
+              },
+              "automl_model": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "model",
+                  "producerTask": "automl-tabular-training-job"
+                }
+              },
+              "bqml_metrics": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "metrics",
+                  "producerTask": "collect-eval-metrics-bqml"
+                }
+              },
+              "bqml_model": {
+                "taskOutputArtifact": {
+                  "outputArtifactKey": "model",
+                  "producerTask": "bigquery-create-model-job"
+                }
+              }
+            },
+            "parameters": {
+              "reference_metric_name": {
+                "componentInputParameter": "comparison_metric"
+              },
+              "thresholds_dict": {
+                "componentInputParameter": "model_thresholds"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Select Best Model"
+          }
+        },
+        "tabular-dataset-create": {
+          "cachingOptions": {
+            "enableCache": true
+          },
+          "componentRef": {
+            "name": "comp-tabular-dataset-create"
+          },
+          "dependentTasks": [
+            "preprocess-data-and-split"
+          ],
+          "inputs": {
+            "parameters": {
+              "bq_source": {
+                "runtimeValue": {
+                  "constant": "bq://{{$.inputs.parameters['pipelinechannel--preprocess-data-and-split-preprocessed_table_id']}}"
+                }
+              },
+              "display_name": {
+                "componentInputParameter": "vertex_dataset_display_name"
+              },
+              "location": {
+                "componentInputParameter": "region"
+              },
+              "pipelinechannel--preprocess-data-and-split-preprocessed_table_id": {
+                "taskOutputParameter": {
+                  "outputParameterKey": "preprocessed_table_id",
+                  "producerTask": "preprocess-data-and-split"
+                }
+              },
+              "project": {
+                "componentInputParameter": "project_id"
+              }
+            }
+          },
+          "taskInfo": {
+            "name": "Create Vertex AI Dataset"
+          }
+        }
+      }
+    },
+    "inputDefinitions": {
+      "parameters": {
+        "automl_budget_milli_node_hours": {
+          "defaultValue": 1000.0,
+          "isOptional": true,
+          "parameterType": "NUMBER_INTEGER"
+        },
+        "automl_column_specs": {
+          "defaultValue": {
+            "alcohol_use_str": "auto",
+            "cigarette_use_str": "auto",
+            "gestation_weeks": "auto",
+            "is_male": "auto",
+            "mother_age": "auto",
+            "plurality_category": "auto"
+          },
+          "isOptional": true,
+          "parameterType": "STRUCT"
+        },
+        "automl_model_display_name_param": {
+          "defaultValue": "baby_mlops_automl_model",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "automl_training_job_display_name": {
+          "defaultValue": "baby_mlops_automl_model_TrainingJob",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "bq_location": {
+          "defaultValue": "US",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "bqml_model_name": {
+          "defaultValue": "my_babyweight_model",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "comparison_metric": {
+          "defaultValue": "mean_absolute_error",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "data_extraction_year": {
+          "defaultValue": 2003.0,
+          "isOptional": true,
+          "parameterType": "NUMBER_INTEGER"
+        },
+        "data_preprocessing_limit": {
+          "defaultValue": 50000.0,
+          "isOptional": true,
+          "parameterType": "NUMBER_INTEGER"
+        },
+        "deploy_machine_type": {
+          "defaultValue": "n1-standard-2",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "deploy_max_replica_count": {
+          "defaultValue": 1.0,
+          "isOptional": true,
+          "parameterType": "NUMBER_INTEGER"
+        },
+        "deploy_min_replica_count": {
+          "defaultValue": 1.0,
+          "isOptional": true,
+          "parameterType": "NUMBER_INTEGER"
+        },
+        "endpoint_display_name": {
+          "defaultValue": "baby-mlops-pipeline-endpoint",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "extracted_bq_table_full_id": {
+          "defaultValue": "baby-mlops.baby_mlops_data_staging.natality_source_extract",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "formatted_bqml_model_version_aliases": {
+          "defaultValue": "['v1']",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "model_thresholds": {
+          "defaultValue": {
+            "mean_absolute_error": 0.9
+          },
+          "isOptional": true,
+          "parameterType": "STRUCT"
+        },
+        "prepped_bq_table_full_id": {
+          "defaultValue": "baby-mlops.baby_mlops_data_staging.natality_features_prepped",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "project_id": {
+          "defaultValue": "baby-mlops",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "region": {
+          "defaultValue": "us-central1",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "source_bq_table": {
+          "defaultValue": "bigquery-public-data.samples.natality",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "var_target": {
+          "defaultValue": "weight_pounds",
+          "isOptional": true,
+          "parameterType": "STRING"
+        },
+        "vertex_dataset_display_name": {
+          "defaultValue": "baby_mlops_vertex_dataset",
+          "isOptional": true,
+          "parameterType": "STRING"
+        }
+      }
+    },
+    "outputDefinitions": {
+      "artifacts": {
+        "collect-eval-metrics-automl-metrics_output": {
+          "artifactType": {
+            "schemaTitle": "system.Metrics",
+            "schemaVersion": "0.0.1"
+          }
+        },
+        "collect-eval-metrics-bqml-metrics": {
+          "artifactType": {
+            "schemaTitle": "system.Metrics",
+            "schemaVersion": "0.0.1"
+          }
+        }
+      }
+    }
+  },
+  "schemaVersion": "2.1.0",
+  "sdkVersion": "kfp-2.6.0"
+}
