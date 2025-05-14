@@ -23,8 +23,10 @@ The pipeline consists of the following components:
 9. **Select Best Model** (`select_best_model`)
 
 **Deployment:**
-10. **Create Endpoint** (`EndpointCreateOp`)
-11. **Deploy Model** (`ModelDeployOp`) - conditionally executed based on model selection
+10. **Create/Check Endpoint** (dual approach with `EndpointCreateOp` and `get_or_create_endpoint`)
+11. **Register Model** (`register_best_model_in_registry`) - registers the best model with proper metadata
+12. **Deploy Model** (`ModelDeployOp`) - conditionally executed based on model selection
+13. **Update Traffic Split** (`update_traffic_split`) - manages traffic for existing endpoints
 
 ## Component Details
 
@@ -211,12 +213,30 @@ The pipeline consists of the following components:
     *   Determines whether the best model meets deployment thresholds.
     *   Provides detailed logging of the comparison and decision-making process.
 
-## Deployment Components
+## Endpoint Management Components
 
-### 10. Create Endpoint
+### 10. Get or Create Endpoint
+
+*   **Component Function:** `src.pipeline_2025.endpoint_management_comp.get_or_create_endpoint`
+*   **Description:** Checks for an existing endpoint with the given display name and creates one if none exists. This prevents creating duplicate endpoints in production.
+*   **Inputs:**
+    *   `project_id` (str): GCP Project ID.
+    *   `location` (str): GCP region for the endpoint.
+    *   `display_name` (str): Display name for the endpoint.
+*   **Outputs:**
+    *   `endpoint` (Artifact): The Vertex AI Endpoint artifact.
+    *   `endpoint_resource_name` (str): The full resource name of the endpoint.
+    *   `is_new_endpoint` (bool): Whether a new endpoint was created (false if using existing endpoint).
+*   **Key Operations:**
+    *   Checks for existing endpoints with the specified display name.
+    *   Uses the most recently created endpoint if multiple exist.
+    *   Creates a new endpoint only if no matching endpoint exists.
+    *   Returns information about whether the endpoint is new or existing.
+
+### 11. Standard Endpoint Creation (for compatibility)
 
 *   **Component Function:** `google_cloud_pipeline_components.v1.endpoint.EndpointCreateOp` (Pre-built GCPC component)
-*   **Description:** Creates a Vertex AI Endpoint for model deployment.
+*   **Description:** Creates a Vertex AI Endpoint for model deployment. Used in parallel with the `get_or_create_endpoint` component to maintain backward compatibility.
 *   **Inputs:**
     *   `project` (str): GCP Project ID.
     *   `location` (str): GCP region for the endpoint.
@@ -226,7 +246,34 @@ The pipeline consists of the following components:
 *   **Key Operations:**
     *   Creates a Vertex AI Endpoint resource where models can be deployed.
 
-### 11. Deploy Model
+## Model Registry Component
+
+### 12. Register Best Model
+
+*   **Component Function:** `src.pipeline_2025.model_registry_comp.register_best_model_in_registry`
+*   **Description:** Registers the selected model (BQML or AutoML) in the Vertex AI Model Registry with proper metadata for lineage tracking.
+*   **Inputs:**
+    *   `model` (Artifact): The trained model artifact (either BQML or AutoML model).
+    *   `model_name` (str): Name for the registered model.
+    *   `model_version` (str): Version identifier for the model (typically timestamp-based).
+    *   `metrics` (Metrics): The evaluation metrics for the model.
+    *   `project_id` (str): GCP Project ID.
+    *   `location` (str): GCP region.
+    *   `description` (str): Description of the model.
+    *   `framework` (str, optional): ML framework used (e.g., "tensorflow").
+    *   `additional_metadata` (dict, optional): Additional metadata to associate with the model.
+*   **Outputs:**
+    *   `registered_model_id` (str): ID of the registered model.
+    *   `model_version_id` (str): ID of the specific model version.
+*   **Key Operations:**
+    *   Registers the model in the Vertex AI Model Registry.
+    *   Adds version information and metadata for tracking.
+    *   Associates evaluation metrics with the registered model.
+    *   Supports detailed metadata for ML governance and lineage tracking.
+
+## Deployment Components
+
+### 13. Deploy Model
 
 *   **Component Function:** `google_cloud_pipeline_components.v1.model.ModelDeployOp` (Pre-built GCPC component)
 *   **Description:** Deploys the selected model to the Vertex AI Endpoint. This component is conditionally executed based on the model selection results.
@@ -244,37 +291,57 @@ The pipeline consists of the following components:
     *   Configures compute resources for the deployment.
     *   Only executed if the model meets the quality threshold defined in the model selection component.
 
+### 14. Update Traffic Split
+
+*   **Component Function:** `src.pipeline_2025.endpoint_management_comp.update_traffic_split`
+*   **Description:** Updates the traffic split for an existing endpoint to route traffic to the newly deployed model.
+*   **Inputs:**
+    *   `project_id` (str): GCP Project ID.
+    *   `location` (str): GCP region.
+    *   `endpoint_resource_name` (str): The full resource name of the endpoint.
+    *   `deployed_model_id` (str): ID of the deployed model to route traffic to.
+    *   `traffic_percentage` (int): Percentage of traffic to route to the model (default: 100%).
+*   **Outputs:**
+    *   `success` (bool): Whether the traffic update was successful.
+*   **Key Operations:**
+    *   Retrieves the current endpoint configuration.
+    *   Identifies the most recently deployed model if a placeholder ID is provided.
+    *   Gradually routes traffic to the new model.
+    *   Distributes remaining traffic (if any) evenly among other deployed models.
+
 ## Conditional Execution
 
-The pipeline uses conditional execution for deployment with modern KFP control flow constructs:
+The pipeline uses conditional execution for deployment with modern KFP v2 control flow constructs:
 
 1. **Model Quality Check** - Uses `dsl.If` to only deploy a model if `deploy_decision` is "true", meaning the model meets the quality threshold for the chosen metric.
 
 2. **Model Type Branching** - Uses `dsl.If` and `dsl.Elif` for separate branches of AutoML and BQML model deployment, depending on which model performed better.
 
+3. **Endpoint Management** - Uses `dsl.If` to conditionally update traffic for existing endpoints versus new endpoints.
+
 This implementation follows best practices by using the more Pythonic control flow constructs introduced in KFP v2 (`dsl.If`/`dsl.Elif`/`dsl.Else`), which replace the deprecated `dsl.Condition` from KFP v1.
 
-## Improvements in the Metrics Collection Components
+## Improvements in the ML Pipeline Architecture
 
-Several enhancements were made to improve reliability and performance:
+Several enhancements were made to improve reliability, performance, and production-readiness:
 
-1. **Timeout Mechanism:** A 3-minute timeout was implemented in the AutoML metrics collection component to prevent it from hanging if the API calls take too long.
+1. **Endpoint Reuse:** The pipeline now checks for existing endpoints with the same name before creating new ones, preventing endpoint proliferation in production environments.
 
-2. **Error Handling:** Comprehensive error handling ensures the components continue execution even if there are issues accessing the metrics.
+2. **Model Registry Integration:** All models are now properly registered in the Vertex AI Model Registry with metadata and lineage information, improving governance and traceability.
 
-3. **Default Values:** All metrics are initialized with sensible default values (0.0) to ensure consistent outputs even when metrics are missing.
+3. **Traffic Management:** The pipeline includes the ability to gradually shift traffic to new model versions, enabling blue/green deployments and minimizing service disruption.
 
-4. **Consistent Metrics Structure:** Both BQML and AutoML components return exactly the same metric structure, making downstream comparison easier.
+4. **Metrics Standardization:** Both BQML and AutoML components return exactly the same metric structure, making downstream comparison easier.
 
-5. **Robust API Interaction:** The AutoML component uses the high-level Vertex AI SDK with proper exception handling for more reliable API interactions.
+5. **Robust API Interaction:** Components use the high-level Vertex AI SDK with proper exception handling for more reliable API interactions.
 
-6. **Logging Enhancement:** Detailed logging helps with debugging and tracking the metrics extraction process.
+6. **Detailed Logging:** Comprehensive logging helps with debugging and tracking the pipeline execution.
 
-7. **Model Selection Logic:** The model selection component intelligently compares different types of metrics, handling both "lower is better" and "higher is better" cases.
+7. **Conditional Deployment:** The pipeline includes conditional logic to only deploy models that meet quality thresholds, and to deploy the best-performing model.
 
-8. **Conditional Deployment:** The pipeline includes conditional logic to only deploy models that meet quality thresholds, and to deploy the best-performing model.
+8. **Caching Strategy:** The pipeline uses an intelligent caching strategy to optimize resource usage during development while ensuring unique versioning in production.
 
-These improvements ensure that the pipeline runs efficiently and reliably, with consistent metric outputs from both model types for comparison and intelligent model selection.
+These improvements ensure that the pipeline runs efficiently and reliably, with consistent metric outputs from both model types for comparison, intelligent model selection, and production-ready deployment capabilities.
 
 # BQML Model Training Component
 
@@ -327,9 +394,12 @@ This approach allows:
 
 # Model Deployment
 
-The pipeline uses a streamlined approach to model deployment:
+The pipeline uses a production-ready approach to model deployment:
 
 1. BQML models are registered directly with Vertex AI during creation using the `model_registry='vertex_ai'` option
 2. AutoML models are already registered with Vertex AI during training
-3. After model selection, the chosen model is deployed to a Vertex AI endpoint
-4. No export or conversion steps are needed, reducing complexity and potential points of failure 
+3. The pipeline now checks for existing endpoints to avoid creating unnecessary duplicates
+4. After model selection, the chosen model is registered with comprehensive metadata
+5. The model is then deployed to the endpoint with appropriate compute resources
+6. For existing endpoints, traffic is gradually shifted to the new model version
+7. This approach enables blue/green deployments and minimizes service disruption during model updates 
