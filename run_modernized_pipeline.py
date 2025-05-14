@@ -41,6 +41,9 @@ from src.pipeline_2025 import create_automl_comp
 from src.pipeline_2025 import select_best_model_comp
 # Import helper component
 from src.pipeline_2025 import helper_components
+# Import the new endpoint management and model registry components
+from src.pipeline_2025 import endpoint_management_comp
+from src.pipeline_2025 import model_registry_comp
 
 # --- Configure Logging ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -345,49 +348,114 @@ def create_pipeline_definition(config: dict):
         best_model_name = select_model_task.outputs["best_model_name"]
         deploy_decision = select_model_task.outputs["deploy_decision"]
         best_metric = select_model_task.outputs["best_metric_value"]
-        logging.info(f"Pipeline will select best model ({best_model_name}) with metric {comparison_metric}={best_metric}")
-        logging.info(f"Deployment decision will be: {deploy_decision}")
+        
+        # Fix: Use string literals for logging instead of pipeline parameters directly
+        logging.info("Pipeline will select best model based on configured metric")
+        logging.info("Deployment decision will be based on model performance threshold")
 
         # --- Deployment - Create Endpoint and Deploy Best Model ---
-        # Create endpoint for model deployment
-        endpoint_task = gcpc_endpoint.EndpointCreateOp(
+        # Create endpoint for model deployment using standard component (unmodified)
+        standard_endpoint_task = gcpc_endpoint.EndpointCreateOp(
             project=project_id,
             location=region,
             display_name=endpoint_display_name
         ).set_display_name("Create Endpoint")
+        
+        # Add separate endpoint check task that runs in parallel and doesn't affect the original flow
+        endpoint_check_task = endpoint_management_comp.get_or_create_endpoint(
+            project_id=project_id,
+            location=region,
+            display_name=endpoint_display_name
+        ).set_display_name("Check Existing Endpoint")
 
         # Only deploy if the model meets the threshold criteria
         with dsl.If(
             select_model_task.outputs["deploy_decision"] == "true",
             name="deploy_decision"
         ):
-            # Deploy AutoML model if it's selected as best
+            # For AutoML model
             with dsl.If(
                 select_model_task.outputs["best_model_name"] == "AutoML",
-                name="deploy_automl"
+                name="register_automl"
             ):
+                # Register AutoML model
+                register_automl_task = model_registry_comp.register_best_model_in_registry(
+                    model=automl_train_task.outputs["model"],
+                    model_name=f"{config['PIPELINE_NAME']}-automl-model",
+                    model_version=config['TIMESTAMP'],
+                    metrics=collect_automl_metrics_task.outputs["metrics_output"],
+                    project_id=project_id,
+                    location=region,
+                    description=f"AutoML model selected by pipeline run at {config['TIMESTAMP']}",
+                    additional_metadata={
+                        "pipeline_run_id": dsl.PIPELINE_JOB_ID_PLACEHOLDER,
+                        "model_type": "AutoML",
+                        "comparison_metric": config["COMPARISON_METRIC"],
+                        "metric_source": "automl_metrics"
+                    }
+                ).set_display_name("Register AutoML Model").after(select_model_task)
+                
+                # Deploy AutoML model
                 automl_deploy_task = ModelDeployOp(
                     model=automl_train_task.outputs["model"],
-                    endpoint=endpoint_task.outputs["endpoint"],
+                    endpoint=standard_endpoint_task.outputs["endpoint"],
                     dedicated_resources_machine_type=deploy_machine_type,
                     dedicated_resources_min_replica_count=deploy_min_replica_count,
                     dedicated_resources_max_replica_count=deploy_max_replica_count,
                     traffic_split={"0": 100}
-                ).set_display_name("Deploy AutoML Model").after(endpoint_task)
+                ).set_display_name("Deploy AutoML Model").after(standard_endpoint_task)
+                
+                # Add traffic management without modifying the original flow
+                with dsl.If(endpoint_check_task.outputs["is_new_endpoint"] == False):
+                    update_traffic_task = endpoint_management_comp.update_traffic_split(
+                        project_id=project_id,
+                        location=region,
+                        endpoint_resource_name=endpoint_check_task.outputs["endpoint_resource_name"],
+                        deployed_model_id="PLACEHOLDER_ID", # We'll update this in the component
+                        traffic_percentage=100  # Give full traffic to new model
+                    ).set_display_name("Update Traffic Split").after(automl_deploy_task)
             
-            # Deploy BQML model if it's selected as best
+            # For BQML model
             with dsl.Elif(
                 select_model_task.outputs["best_model_name"] == "BQML",
-                name="deploy_bqml"
+                name="register_bqml"
             ):
+                # Register BQML model
+                register_bqml_task = model_registry_comp.register_best_model_in_registry(
+                    model=bqml_model_importer_task.outputs["artifact"],
+                    model_name=f"{config['PIPELINE_NAME']}-bqml-model",
+                    model_version=config['TIMESTAMP'],
+                    metrics=collect_bqml_metrics_task.outputs["metrics"],
+                    project_id=project_id,
+                    location=region,
+                    description=f"BQML model selected by pipeline run at {config['TIMESTAMP']}",
+                    additional_metadata={
+                        "pipeline_run_id": dsl.PIPELINE_JOB_ID_PLACEHOLDER,
+                        "model_type": "BQML",
+                        "comparison_metric": config["COMPARISON_METRIC"],
+                        "metric_source": "bqml_metrics"
+                    }
+                ).set_display_name("Register BQML Model").after(select_model_task)
+                
+                # Deploy BQML model
                 bqml_deploy_task = ModelDeployOp(
                     model=bqml_model_importer_task.outputs["artifact"], # Use the imported VertexModel artifact
-                    endpoint=endpoint_task.outputs["endpoint"],
+                    endpoint=standard_endpoint_task.outputs["endpoint"],
                     dedicated_resources_machine_type=deploy_machine_type,
                     dedicated_resources_min_replica_count=deploy_min_replica_count,
                     dedicated_resources_max_replica_count=deploy_max_replica_count,
                     traffic_split={"0": 100}
-                ).set_display_name("Deploy BQML Model").after(endpoint_task)
+                ).set_display_name("Deploy BQML Model").after(standard_endpoint_task)
+                
+                # Add traffic management without modifying the original flow
+                with dsl.If(endpoint_check_task.outputs["is_new_endpoint"] == False):
+                    update_traffic_task = endpoint_management_comp.update_traffic_split(
+                        project_id=project_id,
+                        location=region,
+                        endpoint_resource_name=endpoint_check_task.outputs["endpoint_resource_name"],
+                        deployed_model_id="PLACEHOLDER_ID", # We'll update this in the component
+                        traffic_percentage=100  # Give full traffic to new model
+                    ).set_display_name("Update Traffic Split").after(bqml_deploy_task)
 
         logging.info("Pipeline definition created with data prep, BQML and AutoML training, evaluation, model selection, and deployment components.")
 
