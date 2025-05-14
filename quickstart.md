@@ -94,4 +94,81 @@ DATA_PREPROCESSING_LIMIT="100000"
 BQML_MODEL_NAME="my_babyweight_model"
 BQML_MODEL_VERSION_ALIASES="v1"
 VAR_TARGET="weight_pounds"
-``` 
+
+# AutoML Model Configuration
+VERTEX_DATASET_DISPLAY_NAME="baby-mlops-vertex-dataset"
+AUTOML_MODEL_DISPLAY_NAME="baby-mlops-automl-model" 
+AUTOML_BUDGET_MILLI_NODE_HOURS="1000"
+
+# Deployment Configuration
+ENDPOINT_DISPLAY_NAME="baby-mlops-endpoint"
+DEPLOY_MACHINE_TYPE="n1-standard-2"
+DEPLOY_MIN_REPLICA_COUNT="1"
+DEPLOY_MAX_REPLICA_COUNT="1"
+```
+
+## 4. Running the ML Pipeline
+
+You can run the modernized pipeline with both BQML and AutoML training, model selection, and deployment using the following commands:
+
+### a. Compile the Pipeline Only
+
+This will create the pipeline JSON specification without running it:
+
+```bash
+conda activate baby
+python run_modernized_pipeline.py --compile-only
+```
+
+The compiled pipeline JSON will be saved in the `compiled_pipeline_specs` directory.
+
+### b. Compile and Run the Pipeline
+
+This will compile and execute the pipeline on Vertex AI:
+
+```bash
+conda activate baby
+python run_modernized_pipeline.py --run-pipeline
+```
+
+You can monitor the pipeline execution in the Vertex AI Pipelines section of the Google Cloud Console. The pipeline includes:
+- Data extraction and preprocessing
+- BQML model training
+- AutoML model training
+- Model evaluation and selection
+- Endpoint creation and model deployment
+
+## 5. Running the Streamlit Application
+
+The Streamlit application provides a user-friendly interface to interact with your deployed model.
+
+### a. Make Sure Google Authentication is Set Up
+
+Ensure you're authenticated with Google Cloud:
+
+```bash
+gcloud auth application-default login
+```
+
+### b. Launch the Streamlit App
+
+```bash
+conda activate baby
+streamlit run streamlit_app_dynamic.py
+```
+
+The app will open in your default web browser (typically at http://localhost:8501) and allow you to:
+- Select a deployed endpoint
+- Enter pregnancy data
+- Get baby weight predictions
+- Visualize risk factors
+- Compare predictions with different units (pounds, kilograms, etc.)
+
+## 6. Project Structure Overview
+
+- `src/pipeline_2025/`: Contains the pipeline component modules
+- `compiled_pipeline_specs/`: Stores compiled pipeline JSON specifications
+- `run_modernized_pipeline.py`: Main script to compile and run the pipeline
+- `streamlit_app_dynamic.py`: Modern Streamlit application with enhanced visualization
+- `.env`: Configuration file for project settings
+- `requirements.txt`: Python package dependencies 
