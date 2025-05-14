@@ -41,6 +41,8 @@ def register_best_model_in_registry(
     import logging
     from google.cloud import aiplatform
     import json
+    import time
+    import traceback
     
     # Configure logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -49,86 +51,152 @@ def register_best_model_in_registry(
     aiplatform.init(project=project_id, location=location)
     
     logging.info(f"Registering model: {model_name} version: {model_version}")
+    logging.info(f"Project ID: {project_id}, Location: {location}")
     
-    # Extract model resource name from the artifact
-    if hasattr(model, 'metadata') and 'resourceName' in model.metadata:
-        model_resource_name = model.metadata['resourceName']
-    else:
-        model_resource_name = model.uri
+    registered_model_id = "registration_failed"
+    model_version_id = "registration_failed"
     
-    logging.info(f"Model resource name: {model_resource_name}")
-    
-    # Extract metrics
-    model_metrics = {}
     try:
-        if hasattr(metrics, 'metadata'):
-            for key, value in metrics.metadata.items():
-                try:
-                    # Try to convert to float if possible
-                    model_metrics[key] = float(value)
-                except (ValueError, TypeError):
-                    # Keep as string if not convertible
-                    model_metrics[key] = value
-    except Exception as e:
-        logging.warning(f"Error extracting metrics: {e}")
-    
-    logging.info(f"Model metrics: {model_metrics}")
-    
-    # Combine all metadata
-    metadata = {
-        "metrics": model_metrics,
-        "framework": framework,
-        "version": model_version,
-        **additional_metadata
-    }
-    
-    # Get the model from Vertex AI
-    try:
-        # Try to get existing model by name first
-        existing_models = aiplatform.Model.list(
-            filter=f'display_name="{model_name}"'
-        )
-        
-        if existing_models:
-            # Update existing model with new version
-            logging.info(f"Found existing model with name: {model_name}")
-            model_obj = existing_models[0]
-            
-            # Register this as a new version
-            model_version_obj = model_obj.create_version(
-                model_resource_name=model_resource_name,
-                version_name=model_version,
-                description=description,
-                metadata={
-                    "metrics": json.dumps(model_metrics),
-                    "framework": framework,
-                    **additional_metadata
-                }
-            )
-            registered_model_id = model_obj.resource_name
-            model_version_id = model_version_obj.version_id
+        # Extract model resource name from the artifact
+        if hasattr(model, 'metadata') and 'resourceName' in model.metadata:
+            model_resource_name = model.metadata['resourceName']
+            logging.info(f"Model resource name from metadata: {model_resource_name}")
         else:
-            # Create new model entry with metadata
-            logging.info(f"Creating new model entry: {model_name}")
-            model_obj = aiplatform.Model(model_resource_name)
+            model_resource_name = model.uri
+            logging.info(f"Model resource name from URI: {model_resource_name}")
+        
+        # Dump the entire model metadata for debugging
+        if hasattr(model, 'metadata'):
+            logging.info(f"Full model metadata: {json.dumps(model.metadata, default=str)}")
+        
+        # Extract metrics
+        model_metrics = {}
+        try:
+            if hasattr(metrics, 'metadata'):
+                logging.info(f"Raw metrics metadata: {json.dumps(metrics.metadata, default=str)}")
+                for key, value in metrics.metadata.items():
+                    try:
+                        # Try to convert to float if possible
+                        model_metrics[key] = float(value)
+                    except (ValueError, TypeError):
+                        # Keep as string if not convertible
+                        model_metrics[key] = value
+        except Exception as e:
+            logging.warning(f"Error extracting metrics: {e}")
+            logging.warning(traceback.format_exc())
+        
+        logging.info(f"Processed model metrics: {model_metrics}")
+        
+        # Combine all metadata
+        metadata = {
+            "metrics": model_metrics,
+            "framework": framework,
+            "version": model_version,
+            **additional_metadata
+        }
+        
+        # First, verify if the model_resource_name points to a valid model
+        try:
+            model_exists = False
+            try:
+                # Try to get the model directly
+                test_model = aiplatform.Model(model_name=model_resource_name)
+                logging.info(f"Model exists at resource path: {model_resource_name}")
+                model_exists = True
+            except Exception as model_check_error:
+                logging.warning(f"Could not directly access model: {model_check_error}")
             
-            # Update model metadata
-            model_obj.update(
-                display_name=model_name,
-                description=description,
-                metadata_schema_uri=f"https://googleapis.com/vertexai/ml/metadata/schemas/{framework}/1"
+            # Alternative approach: search for models
+            logging.info(f"Searching for existing models with name: {model_name}")
+            existing_models = aiplatform.Model.list(
+                filter=f'display_name="{model_name}"'
             )
             
-            # Add custom metadata
-            model_obj.metadata = metadata
-            model_obj.update()
+            if existing_models:
+                # Update existing model with new version
+                logging.info(f"Found {len(existing_models)} existing model(s) with name: {model_name}")
+                model_obj = existing_models[0]
+                logging.info(f"Using existing model: {model_obj.resource_name}")
+                
+                # Create a version alias that matches the model_version
+                try:
+                    # Check if the model is already uploaded to Vertex AI
+                    if model_exists:
+                        # If the model exists, we can use it directly
+                        registered_model_id = model_obj.resource_name
+                        model_version_id = model_version
+                        logging.info(f"Model already exists in Vertex AI, using as is: {registered_model_id}")
+                    else:
+                        # Register this as a new version
+                        logging.info(f"Creating new version of existing model: {model_name}")
+                        logging.info(f"Model resource name: {model_resource_name}")
+                        logging.info(f"Version name: {model_version}")
+                        
+                        # Attempt version creation with retry logic
+                        max_retries = 3
+                        retry_count = 0
+                        while retry_count < max_retries:
+                            try:
+                                model_version_obj = model_obj.version(model_version)
+                                # Add additional metadata to the model version
+                                model_version_obj.metadata = metadata
+                                model_version_obj.update()
+                                registered_model_id = model_obj.resource_name
+                                model_version_id = model_version
+                                logging.info(f"Created version successfully: {model_version}")
+                                break
+                            except Exception as version_error:
+                                retry_count += 1
+                                if retry_count >= max_retries:
+                                    raise version_error
+                                logging.warning(f"Retrying version creation ({retry_count}/{max_retries}) after error: {version_error}")
+                                time.sleep(2)
+                except Exception as version_error:
+                    logging.error(f"Error creating model version: {version_error}")
+                    logging.error(traceback.format_exc())
+                    raise version_error
+            else:
+                # Create new model entry with metadata
+                logging.info(f"No existing model found. Creating new model entry: {model_name}")
+                
+                # If model doesn't exist in registry but exists in Vertex AI, use it directly
+                if model_exists:
+                    model_obj = aiplatform.Model(model_name=model_resource_name)
+                    # Update display name to match our desired name
+                    model_obj.update(
+                        display_name=model_name,
+                        description=description
+                    )
+                else:
+                    # Upload a new model - this approach is used as a fallback
+                    logging.info(f"Uploading new model: {model_name}")
+                    model_obj = aiplatform.Model.upload(
+                        display_name=model_name,
+                        artifact_uri=model.uri,
+                        serving_container_image_uri="us-docker.pkg.dev/vertex-ai/prediction/tf2-cpu.2-8:latest",
+                        description=description,
+                        is_default_version=True
+                    )
+                
+                # Add custom metadata
+                try:
+                    model_obj.metadata = metadata
+                    model_obj.update()
+                except Exception as metadata_error:
+                    logging.warning(f"Failed to update metadata: {metadata_error}")
+                
+                registered_model_id = model_obj.resource_name
+                model_version_id = "1"  # First version
+                logging.info(f"Created new model: {registered_model_id}, Version: {model_version_id}")
             
-            registered_model_id = model_obj.resource_name
-            model_version_id = "1"  # First version
-        
-        logging.info(f"Successfully registered model. ID: {registered_model_id}, Version: {model_version_id}")
+            logging.info(f"Successfully registered model. ID: {registered_model_id}, Version: {model_version_id}")
+        except Exception as model_error:
+            logging.error(f"Error handling model registration: {model_error}")
+            logging.error(traceback.format_exc())
+            raise model_error
     except Exception as e:
         logging.error(f"Error registering model: {e}")
+        logging.error(traceback.format_exc())
         registered_model_id = "registration_failed"
         model_version_id = "registration_failed"
     
