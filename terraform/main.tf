@@ -31,12 +31,13 @@ provider "google-beta" {
 
 # Import environment-specific modules
 module "environment" {
-  source = "./environments/${var.environment}"
+  source = "./environments/dev"
   
   project_id = var.project_id
   region     = var.region
   bucket_name = var.bucket_name
   appname    = var.appname
+  service_account_email = var.service_account_email
 }
 
 # Common modules that apply to all environments
