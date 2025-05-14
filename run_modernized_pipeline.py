@@ -3,6 +3,7 @@ import json
 import logging
 from datetime import datetime
 import argparse # For command-line arguments
+import time
 
 from dotenv import load_dotenv, dotenv_values
 import kfp
@@ -26,6 +27,7 @@ from google_cloud_pipeline_components.v1.endpoint import ModelDeployOp
 # from google_cloud_pipeline_components.v1.model.upload_model import ModelUploadOp
 from google_cloud_pipeline_components.v1.dataset import TabularDatasetCreateOp
 from google_cloud_pipeline_components.types import artifact_types
+# Remove import for notification email component
 
 # Import your custom components
 # Ensure src/ is in PYTHONPATH or adjust import accordingly if running from elsewhere
@@ -151,7 +153,7 @@ def load_config():
     config["DEPLOY_MACHINE_TYPE"] = os.getenv("DEPLOY_MACHINE_TYPE", "n1-standard-2")
     config["DEPLOY_MIN_REPLICA_COUNT"] = int(os.getenv("DEPLOY_MIN_REPLICA_COUNT", "1"))
     config["DEPLOY_MAX_REPLICA_COUNT"] = int(os.getenv("DEPLOY_MAX_REPLICA_COUNT", "1"))
-
+    
     # For column_specs, it's better to define it in Python or load from a dedicated JSON file if complex.
     # For simplicity here, we'll assume a simple default or expect it to be well-formed if set via .env.
     automl_column_specs_json = os.getenv("AUTOML_COLUMN_SPECS_JSON")
@@ -228,8 +230,9 @@ def create_pipeline_definition(config: dict):
         endpoint_display_name: str = config["ENDPOINT_DISPLAY_NAME"],
         deploy_machine_type: str = config["DEPLOY_MACHINE_TYPE"],
         deploy_min_replica_count: int = config["DEPLOY_MIN_REPLICA_COUNT"],
-        deploy_max_replica_count: int = config["DEPLOY_MAX_REPLICA_COUNT"]
+        deploy_max_replica_count: int = config["DEPLOY_MAX_REPLICA_COUNT"],
     ):
+        # Data extraction component - use the existing extract_source_data component
         extract_task = data_prep_comp.extract_source_data(
             project_id=project_id,
             source_bq_table_id=source_bq_table,
@@ -255,7 +258,7 @@ def create_pipeline_definition(config: dict):
         else:
             # When caching is disabled or in production, use a unique identifier
             vertex_model_id = f"{bqml_model_name}-{config['TIMESTAMP']}"
-            
+        
         train_query = create_bqml_comp.create_query_build_bqml_model(
             project=project_id,
             bq_dataset=config["BQ_DATASET_STAGING"],
@@ -395,15 +398,24 @@ def create_pipeline_definition(config: dict):
                     }
                 ).set_display_name("Register AutoML Model").after(select_model_task)
                 
-                # Deploy AutoML model
+                # Deploy AutoML model - now using the registered model ID and version
                 automl_deploy_task = ModelDeployOp(
                     model=automl_train_task.outputs["model"],
                     endpoint=standard_endpoint_task.outputs["endpoint"],
                     dedicated_resources_machine_type=deploy_machine_type,
                     dedicated_resources_min_replica_count=deploy_min_replica_count,
                     dedicated_resources_max_replica_count=deploy_max_replica_count,
-                    traffic_split={"0": 100}
-                ).set_display_name("Deploy AutoML Model").after(standard_endpoint_task)
+                    traffic_split={"0": 100},
+                    # Adding display metadata to track model info 
+                    deployed_model_display_name=f"AutoML-Model-{config['TIMESTAMP']}"
+                ).set_display_name("Deploy AutoML Model").after(standard_endpoint_task, register_automl_task)
+                
+                # Log model registration info
+                log_model_info_task = helper_components.log_model_details(
+                    model_id=register_automl_task.outputs["registered_model_id"],
+                    model_version=register_automl_task.outputs["model_version_id"],
+                    model_type="AutoML"
+                ).set_display_name("Log AutoML Model Info").after(register_automl_task)
                 
                 # Add traffic management without modifying the original flow
                 with dsl.If(endpoint_check_task.outputs["is_new_endpoint"] == False,
@@ -413,7 +425,10 @@ def create_pipeline_definition(config: dict):
                         location=region,
                         endpoint_resource_name=endpoint_check_task.outputs["endpoint_resource_name"],
                         deployed_model_id="PLACEHOLDER_ID", # We'll update this in the component
-                        traffic_percentage=100  # Give full traffic to new model
+                        traffic_percentage=100,  # Give full traffic to new model
+                        # Pass registered model information for better tracking
+                        registered_model_id=register_automl_task.outputs["registered_model_id"],
+                        model_version_id=register_automl_task.outputs["model_version_id"]
                     ).set_display_name("Update Traffic Split").after(automl_deploy_task)
             
             # For BQML model
@@ -438,15 +453,24 @@ def create_pipeline_definition(config: dict):
                     }
                 ).set_display_name("Register BQML Model").after(select_model_task)
                 
-                # Deploy BQML model
+                # Log model registration info
+                log_model_info_task = helper_components.log_model_details(
+                    model_id=register_bqml_task.outputs["registered_model_id"],
+                    model_version=register_bqml_task.outputs["model_version_id"],
+                    model_type="BQML"
+                ).set_display_name("Log BQML Model Info").after(register_bqml_task)
+                
+                # Deploy BQML model - now using the registered model ID and version
                 bqml_deploy_task = ModelDeployOp(
                     model=bqml_model_importer_task.outputs["artifact"], # Use the imported VertexModel artifact
                     endpoint=standard_endpoint_task.outputs["endpoint"],
                     dedicated_resources_machine_type=deploy_machine_type,
                     dedicated_resources_min_replica_count=deploy_min_replica_count,
                     dedicated_resources_max_replica_count=deploy_max_replica_count,
-                    traffic_split={"0": 100}
-                ).set_display_name("Deploy BQML Model").after(standard_endpoint_task)
+                    traffic_split={"0": 100},
+                    # Adding display metadata to track model info
+                    deployed_model_display_name=f"BQML-Model-{config['TIMESTAMP']}"
+                ).set_display_name("Deploy BQML Model").after(standard_endpoint_task, register_bqml_task)
                 
                 # Add traffic management without modifying the original flow
                 with dsl.If(endpoint_check_task.outputs["is_new_endpoint"] == False,
@@ -456,10 +480,11 @@ def create_pipeline_definition(config: dict):
                         location=region,
                         endpoint_resource_name=endpoint_check_task.outputs["endpoint_resource_name"],
                         deployed_model_id="PLACEHOLDER_ID", # We'll update this in the component
-                        traffic_percentage=100  # Give full traffic to new model
+                        traffic_percentage=100,  # Give full traffic to new model
+                        # Pass registered model information for better tracking
+                        registered_model_id=register_bqml_task.outputs["registered_model_id"],
+                        model_version_id=register_bqml_task.outputs["model_version_id"]
                     ).set_display_name("Update Traffic Split").after(bqml_deploy_task)
-
-        logging.info("Pipeline definition created with data prep, BQML and AutoML training, evaluation, model selection, and deployment components.")
 
     return modernized_full_pipeline_py
 
