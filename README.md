@@ -18,6 +18,17 @@ The end-to-end MLOps pipeline orchestrates the entire machine learning lifecycle
 
 ![Vertex AI Pipeline Architecture](img/final_pipeline.png)
 
+## CI/CD Pipeline
+The project includes a fully automated CI/CD pipeline using:
+
+- **Infrastructure as Code**: Terraform configuration for all GCP resources
+- **Containerization**: Docker images stored in Artifact Registry
+- **Continuous Integration**: Cloud Build triggers for automated builds
+- **Continuous Deployment**: Automated deployment to Cloud Run
+- **Environment Separation**: Separate pipelines for development and production
+
+The CI/CD workflow automatically builds and deploys the Streamlit application when changes are pushed to the repository, ensuring consistent and reliable deployments.
+
 ## Key Production Features
 
 ### 1. Dual-Model Training & Evaluation
