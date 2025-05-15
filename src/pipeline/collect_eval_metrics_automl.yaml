@@ -1,0 +1,48 @@
+name: Collect eval metrics automl
+inputs:
+- {name: region, type: String}
+- {name: model, type: Artifact}
+outputs:
+- {name: metrics, type: Metrics}
+- {name: metrics_dict, type: JsonObject}
+implementation:
+  container:
+    image: python:3.9
+    command:
+    - sh
+    - -c
+    - |2
+
+      if ! [ -x "$(command -v pip)" ]; then
+          python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip
+      fi
+
+      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-aiplatform' 'kfp==1.8.16' && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp -d)
+      printf "%s" "$0" > "$program_path/ephemeral_component.py"
+      python3 -m kfp.v2.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+    - "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing\
+      \ import *\n\ndef collect_eval_metrics_automl(\n    region: str, \n    model:\
+      \ Input[Artifact], \n    metrics: Output[Metrics]\n) -> NamedTuple(\"Outputs\"\
+      ,[(\"metrics_dict\", dict),],\n):   \n    import google.cloud.aiplatform.gapic\
+      \ as gapic\n    from collections import namedtuple\n\n    # Get a reference\
+      \ to the Model Service client\n    client_options = {\"api_endpoint\": f\"{region}-aiplatform.googleapis.com\"\
+      }\n    model_service_client = gapic.ModelServiceClient(client_options=client_options)\n\
+      \n    model_resource_name = model.metadata[\"resourceName\"]\n    model_evaluations\
+      \ = model_service_client.list_model_evaluations(parent=model_resource_name)\n\
+      \    model_evaluation = list(model_evaluations)[0]\n    available_metrics =\
+      \ [\n        \"meanAbsoluteError\",\n        \"meanAbsolutePercentageError\"\
+      ,\n        \"rSquared\",\n        \"rootMeanSquaredError\",\n        \"rootMeanSquaredLogError\"\
+      ,\n    ]\n\n    metrics_dict = dict()\n    for x in available_metrics:\n   \
+      \     val = model_evaluation.metrics.get(x)\n        metrics_dict[x] = val\n\
+      \        metrics.log_metric(str(x), float(val))\n\n    metrics.log_metric(\"\
+      framework\", \"AutoML\")\n    outputs = namedtuple(\"Outputs\", [\"metrics_dict\"\
+      ])\n    print(metrics_dict)\n\n    return outputs(metrics_dict)    \n\n"
+    args:
+    - --executor_input
+    - {executorInput: null}
+    - --function_to_execute
+    - collect_eval_metrics_automl

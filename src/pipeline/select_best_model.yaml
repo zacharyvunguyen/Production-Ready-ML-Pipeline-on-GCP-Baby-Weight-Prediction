@@ -1,0 +1,79 @@
+name: Select best model
+inputs:
+- {name: automl_metrics, type: Metrics}
+- {name: automl_model, type: Artifact}
+- {name: bqml_metrics, type: Metrics}
+- {name: bqml_model, type: Artifact}
+- {name: reference_metric_name, type: String}
+- {name: thresholds_dict, type: JsonObject}
+outputs:
+- {name: best_model_metrics, type: Metrics}
+- {name: best_model, type: Artifact}
+- {name: deploy_decision, type: String}
+- {name: best_model_name, type: String}
+- {name: best_metric, type: Float}
+implementation:
+  container:
+    image: python:3.9
+    command:
+    - sh
+    - -c
+    - |2
+
+      if ! [ -x "$(command -v pip)" ]; then
+          python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip
+      fi
+
+      PIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.16' && "$0" "$@"
+    - sh
+    - -ec
+    - |
+      program_path=$(mktemp -d)
+      printf "%s" "$0" > "$program_path/ephemeral_component.py"
+      python3 -m kfp.v2.components.executor_main                         --component_module_path                         "$program_path/ephemeral_component.py"                         "$@"
+    - "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing\
+      \ import *\n\ndef select_best_model(\n    automl_metrics: Input[Metrics],\n\
+      \    automl_model: Input[Artifact],\n    bqml_metrics: Input[Metrics],\n   \
+      \ bqml_model: Input[Artifact],\n\n    #custom_model_metrics: Input[Metrics],\n\
+      \    reference_metric_name: str,\n    thresholds_dict: dict,\n    best_model_metrics:\
+      \ Output[Metrics], \n    best_model: Output[Artifact],\n) -> NamedTuple(\n \
+      \   \"Outputs\",[\n        (\"deploy_decision\", str),\n        (\"best_model_name\"\
+      , str),\n        (\"best_metric\", float),\n    ],\n):\n    import logging\n\
+      \    import json\n    from collections import namedtuple\n\n    # In cases where\
+      \ the models use different metrics\n    if reference_metric_name == \"mae\"\
+      :\n        metric_possible_names = [\"meanAbsoluteError\", \"mean_absolute_error\"\
+      ,\"mae\"]\n    elif reference_metric_name == \"mse\":\n        metric_possible_names\
+      \ = [\"MeanSquaredError\", \"mean_squared_error\", \"mse\"]\n\n    logging.info(f\"\
+      automl_metrics.metadata: {automl_metrics.metadata}\")\n    logging.info(f\"\
+      bqml_metrics.metadata: {bqml_metrics.metadata}\")\n    #logging.info(f\"custom_model_metrics.metadata:\
+      \ {custom_model_metrics.metadata}\")\n\n    for metric_name in metric_possible_names:\
+      \     \n        try:\n            automl_metric = automl_metrics.metadata[metric_name]\n\
+      \            logging.info(f\"automl_metric: {automl_metrics}\")\n        except:\n\
+      \            logging.info(f\"{metric_name} does not exist in the AutoML Model\
+      \ dictionary\")\n\n        try:\n            bqml_metric = bqml_metrics.metadata[metric_name]\n\
+      \            logging.info(f\"bqml_metric: {bqml_metric}\")\n        except:\n\
+      \            logging.info(f\"{metric_name} does not exist in the BQML dictionary\"\
+      )\n\n        #try:\n        #    custom_model_metric = custom_model_metrics.metadata[metric_name]\n\
+      \        #    logging.info(f\"custom_model_metric: {custom_model_metric}\")\n\
+      \        #except:\n        #    logging.info(f\"{metric_name} does not exist\
+      \ in the Custom Model dictionary\")\n\n    # Find the best model (i.e. with\
+      \ the smallest RMSE)\n    if bqml_metric <= automl_metric:\n        best_model_name\
+      \ = \"bqml\"\n        best_model = bqml_model\n        best_metric = bqml_metric\n\
+      \        best_model_metrics.metadata = bqml_metrics.metadata\n    else:\n  \
+      \      best_model_name = \"automl\"\n        best_model = automl_model\n   \
+      \     best_metric = automl_metric\n        best_model_metrics.metadata = automl_metrics.metadata\n\
+      \n    # Determine if the best model meets the threshold\n    if best_metric\
+      \ < thresholds_dict[reference_metric_name]:\n        deploy_decision = \"true\"\
+      \n    else:\n        deploy_decision = \"false\"\n\n    logging.info(f\"Which\
+      \ model is best? {best_model_name}\")\n    logging.info(f\"What metric is being\
+      \ used? {reference_metric_name}\")\n    logging.info(f\"What is the best metric?\
+      \ {best_metric}\")\n    logging.info(f\"What is the threshold to deploy? {thresholds_dict}\"\
+      )\n    logging.info(f\"Deploy decision: {deploy_decision}\")\n\n    outputs\
+      \ = namedtuple(\n        \"Outputs\", [\"deploy_decision\", \"best_model_name\"\
+      , \"best_metric\",]\n    )\n\n    return outputs(deploy_decision, best_model_name,\
+      \ best_metric)\n\n"
+    args:
+    - --executor_input
+    - {executorInput: null}
+    - --function_to_execute
+    - select_best_model

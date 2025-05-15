@@ -1,0 +1,1678 @@
+{
+  "pipelineSpec": {
+    "components": {
+      "comp-automl-tabular-training-job": {
+        "executorLabel": "exec-automl-tabular-training-job",
+        "inputDefinitions": {
+          "artifacts": {
+            "dataset": {
+              "artifactType": {
+                "schemaTitle": "google.VertexDataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "budget_milli_node_hours": {
+              "type": "INT"
+            },
+            "column_specs": {
+              "type": "STRING"
+            },
+            "disable_early_stopping": {
+              "type": "STRING"
+            },
+            "display_name": {
+              "type": "STRING"
+            },
+            "export_evaluated_data_items": {
+              "type": "STRING"
+            },
+            "labels": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "model_display_name": {
+              "type": "STRING"
+            },
+            "optimization_objective": {
+              "type": "STRING"
+            },
+            "optimization_prediction_type": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "target_column": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "model": {
+              "artifactType": {
+                "schemaTitle": "google.VertexModel",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          }
+        }
+      },
+      "comp-bigquery-create-model-job": {
+        "executorLabel": "exec-bigquery-create-model-job",
+        "inputDefinitions": {
+          "parameters": {
+            "job_configuration_query": {
+              "type": "STRING"
+            },
+            "labels": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "query": {
+              "type": "STRING"
+            },
+            "query_parameters": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "model": {
+              "artifactType": {
+                "schemaTitle": "google.BQMLModel",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-bigquery-evaluate-model-job": {
+        "executorLabel": "exec-bigquery-evaluate-model-job",
+        "inputDefinitions": {
+          "artifacts": {
+            "model": {
+              "artifactType": {
+                "schemaTitle": "google.BQMLModel",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "job_configuration_query": {
+              "type": "STRING"
+            },
+            "labels": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "query_parameters": {
+              "type": "STRING"
+            },
+            "query_statement": {
+              "type": "STRING"
+            },
+            "table_name": {
+              "type": "STRING"
+            },
+            "threshold": {
+              "type": "DOUBLE"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "evaluation_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-collect-eval-metrics-automl": {
+        "executorLabel": "exec-collect-eval-metrics-automl",
+        "inputDefinitions": {
+          "artifacts": {
+            "model": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "region": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "metrics_dict": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-collect-eval-metrics-bqml": {
+        "executorLabel": "exec-collect-eval-metrics-bqml",
+        "inputDefinitions": {
+          "artifacts": {
+            "eval_metrics_artifact": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "metrics_dict": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-condition-deploy-automl-2": {
+        "dag": {
+          "tasks": {
+            "model-deploy": {
+              "cachingOptions": {
+                "enableCache": true
+              },
+              "componentRef": {
+                "name": "comp-model-deploy"
+              },
+              "inputs": {
+                "artifacts": {
+                  "endpoint": {
+                    "componentInputArtifact": "pipelineparam--endpoint-create-endpoint"
+                  },
+                  "model": {
+                    "componentInputArtifact": "pipelineparam--automl-tabular-training-job-model"
+                  }
+                },
+                "parameters": {
+                  "automatic_resources_max_replica_count": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "automatic_resources_min_replica_count": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "dedicated_resources_accelerator_count": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "dedicated_resources_accelerator_type": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "dedicated_resources_machine_type": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "n1-highmem-4"
+                      }
+                    }
+                  },
+                  "dedicated_resources_max_replica_count": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "1"
+                      }
+                    }
+                  },
+                  "dedicated_resources_min_replica_count": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "1"
+                      }
+                    }
+                  },
+                  "deployed_model_display_name": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "disable_container_logging": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "enable_access_logging": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "intValue": "0"
+                      }
+                    }
+                  },
+                  "explanation_metadata": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{}"
+                      }
+                    }
+                  },
+                  "explanation_parameters": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{}"
+                      }
+                    }
+                  },
+                  "service_account": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": ""
+                      }
+                    }
+                  },
+                  "traffic_split": {
+                    "runtimeValue": {
+                      "constantValue": {
+                        "stringValue": "{\"0\": 100}"
+                      }
+                    }
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "deploy_model_to_endpoint"
+              }
+            }
+          }
+        },
+        "inputDefinitions": {
+          "artifacts": {
+            "pipelineparam--automl-tabular-training-job-model": {
+              "artifactType": {
+                "schemaTitle": "google.VertexModel",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "pipelineparam--endpoint-create-endpoint": {
+              "artifactType": {
+                "schemaTitle": "google.VertexEndpoint",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "pipelineparam--select-best-model-best_model_name": {
+              "type": "STRING"
+            },
+            "pipelineparam--select-best-model-deploy_decision": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-condition-deploy-decision-1": {
+        "dag": {
+          "tasks": {
+            "condition-deploy-automl-2": {
+              "componentRef": {
+                "name": "comp-condition-deploy-automl-2"
+              },
+              "inputs": {
+                "artifacts": {
+                  "pipelineparam--automl-tabular-training-job-model": {
+                    "componentInputArtifact": "pipelineparam--automl-tabular-training-job-model"
+                  },
+                  "pipelineparam--endpoint-create-endpoint": {
+                    "componentInputArtifact": "pipelineparam--endpoint-create-endpoint"
+                  }
+                },
+                "parameters": {
+                  "pipelineparam--select-best-model-best_model_name": {
+                    "componentInputParameter": "pipelineparam--select-best-model-best_model_name"
+                  },
+                  "pipelineparam--select-best-model-deploy_decision": {
+                    "componentInputParameter": "pipelineparam--select-best-model-deploy_decision"
+                  }
+                }
+              },
+              "taskInfo": {
+                "name": "condition-deploy-automl-2"
+              },
+              "triggerPolicy": {
+                "condition": "inputs.parameters['pipelineparam--select-best-model-best_model_name'].string_value == 'automl'"
+              }
+            }
+          }
+        },
+        "inputDefinitions": {
+          "artifacts": {
+            "pipelineparam--automl-tabular-training-job-model": {
+              "artifactType": {
+                "schemaTitle": "google.VertexModel",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "pipelineparam--endpoint-create-endpoint": {
+              "artifactType": {
+                "schemaTitle": "google.VertexEndpoint",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "pipelineparam--select-best-model-best_model_name": {
+              "type": "STRING"
+            },
+            "pipelineparam--select-best-model-deploy_decision": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-endpoint-create": {
+        "executorLabel": "exec-endpoint-create",
+        "inputDefinitions": {
+          "parameters": {
+            "description": {
+              "type": "STRING"
+            },
+            "display_name": {
+              "type": "STRING"
+            },
+            "encryption_spec_key_name": {
+              "type": "STRING"
+            },
+            "labels": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "network": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "endpoint": {
+              "artifactType": {
+                "schemaTitle": "google.VertexEndpoint",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-extract-source-data": {
+        "executorLabel": "exec-extract-source-data",
+        "inputDefinitions": {
+          "parameters": {
+            "in_bq_table_id": {
+              "type": "STRING"
+            },
+            "out_bq_table_id": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "region": {
+              "type": "STRING"
+            },
+            "year": {
+              "type": "INT"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "out_bq_table_uri": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-model-deploy": {
+        "executorLabel": "exec-model-deploy",
+        "inputDefinitions": {
+          "artifacts": {
+            "endpoint": {
+              "artifactType": {
+                "schemaTitle": "google.VertexEndpoint",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "model": {
+              "artifactType": {
+                "schemaTitle": "google.VertexModel",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "automatic_resources_max_replica_count": {
+              "type": "INT"
+            },
+            "automatic_resources_min_replica_count": {
+              "type": "INT"
+            },
+            "dedicated_resources_accelerator_count": {
+              "type": "INT"
+            },
+            "dedicated_resources_accelerator_type": {
+              "type": "STRING"
+            },
+            "dedicated_resources_machine_type": {
+              "type": "STRING"
+            },
+            "dedicated_resources_max_replica_count": {
+              "type": "INT"
+            },
+            "dedicated_resources_min_replica_count": {
+              "type": "INT"
+            },
+            "deployed_model_display_name": {
+              "type": "STRING"
+            },
+            "disable_container_logging": {
+              "type": "STRING"
+            },
+            "enable_access_logging": {
+              "type": "STRING"
+            },
+            "explanation_metadata": {
+              "type": "STRING"
+            },
+            "explanation_parameters": {
+              "type": "STRING"
+            },
+            "service_account": {
+              "type": "STRING"
+            },
+            "traffic_split": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "gcp_resources": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-preprocess-data": {
+        "executorLabel": "exec-preprocess-data",
+        "inputDefinitions": {
+          "parameters": {
+            "in_bq_table_id": {
+              "type": "STRING"
+            },
+            "limit": {
+              "type": "INT"
+            },
+            "out_bq_table_id": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            },
+            "region": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "parameters": {
+            "out_bq_table_uri": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-select-best-model": {
+        "executorLabel": "exec-select-best-model",
+        "inputDefinitions": {
+          "artifacts": {
+            "automl_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "automl_model": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "bqml_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "bqml_model": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "reference_metric_name": {
+              "type": "STRING"
+            },
+            "thresholds_dict": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "best_model": {
+              "artifactType": {
+                "schemaTitle": "system.Artifact",
+                "schemaVersion": "0.0.1"
+              }
+            },
+            "best_model_metrics": {
+              "artifactType": {
+                "schemaTitle": "system.Metrics",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          },
+          "parameters": {
+            "best_metric": {
+              "type": "DOUBLE"
+            },
+            "best_model_name": {
+              "type": "STRING"
+            },
+            "deploy_decision": {
+              "type": "STRING"
+            }
+          }
+        }
+      },
+      "comp-tabular-dataset-create": {
+        "executorLabel": "exec-tabular-dataset-create",
+        "inputDefinitions": {
+          "parameters": {
+            "bq_source": {
+              "type": "STRING"
+            },
+            "display_name": {
+              "type": "STRING"
+            },
+            "labels": {
+              "type": "STRING"
+            },
+            "location": {
+              "type": "STRING"
+            },
+            "project": {
+              "type": "STRING"
+            }
+          }
+        },
+        "outputDefinitions": {
+          "artifacts": {
+            "dataset": {
+              "artifactType": {
+                "schemaTitle": "google.VertexDataset",
+                "schemaVersion": "0.0.1"
+              }
+            }
+          }
+        }
+      }
+    },
+    "deploymentSpec": {
+      "executors": {
+        "exec-automl-tabular-training-job": {
+          "container": {
+            "args": [
+              "--init.project",
+              "{{$.inputs.parameters['project']}}",
+              "--init.location",
+              "{{$.inputs.parameters['location']}}",
+              "--init.display_name",
+              "{{$.inputs.parameters['display_name']}}",
+              "--init.optimization_prediction_type",
+              "{{$.inputs.parameters['optimization_prediction_type']}}",
+              "--method.dataset",
+              "{{$.inputs.artifacts['dataset'].metadata['resourceName']}}",
+              "--method.target_column",
+              "{{$.inputs.parameters['target_column']}}",
+              "--init.optimization_objective",
+              "{{$.inputs.parameters['optimization_objective']}}",
+              "--init.column_specs",
+              "{{$.inputs.parameters['column_specs']}}",
+              "--init.labels",
+              "{{$.inputs.parameters['labels']}}",
+              "--method.budget_milli_node_hours",
+              "{{$.inputs.parameters['budget_milli_node_hours']}}",
+              "--method.model_display_name",
+              "{{$.inputs.parameters['model_display_name']}}",
+              "--method.disable_early_stopping",
+              "{{$.inputs.parameters['disable_early_stopping']}}",
+              "--method.export_evaluated_data_items",
+              "{{$.inputs.parameters['export_evaluated_data_items']}}",
+              "--executor_input",
+              "{{$}}",
+              "--resource_name_output_artifact_uri",
+              "{{$.outputs.artifacts['model'].uri}}"
+            ],
+            "command": [
+              "python3",
+              "-m",
+              "google_cloud_pipeline_components.container.aiplatform.remote_runner",
+              "--cls_name",
+              "AutoMLTabularTrainingJob",
+              "--method_name",
+              "run"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        },
+        "exec-bigquery-create-model-job": {
+          "container": {
+            "args": [
+              "--type",
+              "BigqueryCreateModelJob",
+              "--project",
+              "{{$.inputs.parameters['project']}}",
+              "--location",
+              "{{$.inputs.parameters['location']}}",
+              "--payload",
+              "{\"configuration\": {\"query\": {{$.inputs.parameters['job_configuration_query']}}, \"labels\": {{$.inputs.parameters['labels']}}}}",
+              "--job_configuration_query_override",
+              "{\"query\": \"{{$.inputs.parameters['query']}}\", \"query_parameters\": {{$.inputs.parameters['query_parameters']}}}",
+              "--gcp_resources",
+              "{{$.outputs.parameters['gcp_resources'].output_file}}",
+              "--executor_input",
+              "{{$}}"
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.v1.bigquery.create_model.launcher"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        },
+        "exec-bigquery-evaluate-model-job": {
+          "container": {
+            "args": [
+              "--type",
+              "BigqueryEvaluateModelJob",
+              "--project",
+              "{{$.inputs.parameters['project']}}",
+              "--location",
+              "{{$.inputs.parameters['location']}}",
+              "--model_name",
+              "{{$.inputs.artifacts['model'].metadata['projectId']}}.{{$.inputs.artifacts['model'].metadata['datasetId']}}.{{$.inputs.artifacts['model'].metadata['modelId']}}",
+              "--table_name",
+              "{{$.inputs.parameters['table_name']}}",
+              "--query_statement",
+              "{{$.inputs.parameters['query_statement']}}",
+              "--threshold",
+              "{{$.inputs.parameters['threshold']}}",
+              "--payload",
+              "{\"configuration\": {\"query\": {{$.inputs.parameters['job_configuration_query']}}, \"labels\": {{$.inputs.parameters['labels']}}}}",
+              "--job_configuration_query_override",
+              "{\"query_parameters\": {{$.inputs.parameters['query_parameters']}}, \"destination_encryption_configuration\": {\"kmsKeyName\": \"\"}}",
+              "--gcp_resources",
+              "{{$.outputs.parameters['gcp_resources'].output_file}}",
+              "--executor_input",
+              "{{$}}"
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.v1.bigquery.evaluate_model.launcher"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        },
+        "exec-collect-eval-metrics-automl": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "collect_eval_metrics_automl"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'google-cloud-aiplatform' 'kfp==1.8.16' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef collect_eval_metrics_automl(\n    region: str, \n    model: Input[Artifact], \n    metrics: Output[Metrics]\n) -> NamedTuple(\"Outputs\",[(\"metrics_dict\", dict),],\n):   \n    import google.cloud.aiplatform.gapic as gapic\n    from collections import namedtuple\n\n    # Get a reference to the Model Service client\n    client_options = {\"api_endpoint\": f\"{region}-aiplatform.googleapis.com\"}\n    model_service_client = gapic.ModelServiceClient(client_options=client_options)\n\n    model_resource_name = model.metadata[\"resourceName\"]\n    model_evaluations = model_service_client.list_model_evaluations(parent=model_resource_name)\n    model_evaluation = list(model_evaluations)[0]\n    available_metrics = [\n        \"meanAbsoluteError\",\n        \"meanAbsolutePercentageError\",\n        \"rSquared\",\n        \"rootMeanSquaredError\",\n        \"rootMeanSquaredLogError\",\n    ]\n\n    metrics_dict = dict()\n    for x in available_metrics:\n        val = model_evaluation.metrics.get(x)\n        metrics_dict[x] = val\n        metrics.log_metric(str(x), float(val))\n\n    metrics.log_metric(\"framework\", \"AutoML\")\n    outputs = namedtuple(\"Outputs\", [\"metrics_dict\"])\n    print(metrics_dict)\n\n    return outputs(metrics_dict)    \n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-collect-eval-metrics-bqml": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "collect_eval_metrics_bqml"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.16' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef collect_eval_metrics_bqml(\n    eval_metrics_artifact: Input[Artifact],\n    metrics: Output[Metrics],\n) -> NamedTuple(\n    \"Outputs\",[\n        #(\"metrics\", Output[Metrics]),\n        (\"metrics_dict\", dict),],\n):    \n\n    import math\n    from collections import namedtuple\n\n    metadata = eval_metrics_artifact.metadata\n    for r in metadata[\"rows\"]:\n        rows = r[\"f\"]\n        schema = metadata[\"schema\"][\"fields\"]\n        metrics_dict = {}\n        for metric, value in zip(schema, rows):\n            metric_name = metric[\"name\"]\n            val = float(value[\"v\"])\n            metrics_dict[metric_name] = val\n            metrics.log_metric(metric_name, val)\n            if metric_name == \"mean_squared_error\":\n                rmse = math.sqrt(val)\n                metrics.log_metric(\"root_mean_squared_error\", rmse)\n\n    metrics.log_metric(\"framework\", \"BQML\")\n\n    print(metrics_dict)\n\n    outputs = namedtuple(\"Outputs\", \n                         [#\"metrics\", \n                          \"metrics_dict\"])\n\n    return outputs(\n        #metrics,\n        metrics_dict)\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-endpoint-create": {
+          "container": {
+            "args": [
+              "--type",
+              "CreateEndpoint",
+              "--payload",
+              "{\"display_name\": \"{{$.inputs.parameters['display_name']}}\", \"description\": \"{{$.inputs.parameters['description']}}\", \"labels\": {{$.inputs.parameters['labels']}}, \"encryption_spec\": {\"kms_key_name\":\"{{$.inputs.parameters['encryption_spec_key_name']}}\"}, \"network\": \"{{$.inputs.parameters['network']}}\"}",
+              "--project",
+              "{{$.inputs.parameters['project']}}",
+              "--location",
+              "{{$.inputs.parameters['location']}}",
+              "--gcp_resources",
+              "{{$.outputs.parameters['gcp_resources'].output_file}}",
+              "--executor_input",
+              "{{$}}"
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.v1.endpoint.create_endpoint.launcher"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        },
+        "exec-extract-source-data": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "extract_source_data"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'bigquery' 'kfp==1.8.16' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef extract_source_data(\n    project: str,\n    region:str,\n    year: int,\n    in_bq_table_id: str, \n    out_bq_table_id: str,\n) -> NamedTuple(\n    \"Outputs\", [(\"out_bq_table_uri\", str)]\n):\n\n    from google.cloud import bigquery\n    from collections import namedtuple\n\n    bqclient = bigquery.Client(project=project)\n    query = f\"\"\"\n    CREATE OR REPLACE TABLE `{out_bq_table_id}` AS (\n    SELECT\n        weight_pounds,\n        is_male,\n        mother_age,\n        plurality,\n        gestation_weeks,\n        cigarette_use,\n        alcohol_use,\n        year, month, wday, state, mother_birth_state    \n    FROM\n        {in_bq_table_id}\n    WHERE\n        year > {year} \n        AND weight_pounds > 0\n        AND mother_age > 0\n        AND plurality > 0\n        AND gestation_weeks > 19     \n    )\n    \"\"\"\n\n    response = bqclient.query(query)\n    _ = response.result()   \n\n    # return output parameters\n    out_bq_table_uri = f\"bq://{out_bq_table_id}\"\n    outputs = namedtuple(\"Outputs\", [\"out_bq_table_uri\"])\n\n    return outputs(out_bq_table_uri)\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-model-deploy": {
+          "container": {
+            "args": [
+              "--type",
+              "DeployModel",
+              "--payload",
+              "{\"endpoint\": \"{{$.inputs.artifacts['endpoint'].metadata['resourceName']}}\", \"traffic_split\": {{$.inputs.parameters['traffic_split']}}, \"deployed_model\": {\"model\": \"{{$.inputs.artifacts['model'].metadata['resourceName']}}\", \"dedicated_resources\": {\"machine_spec\": {\"machine_type\": \"{{$.inputs.parameters['dedicated_resources_machine_type']}}\", \"accelerator_type\": \"{{$.inputs.parameters['dedicated_resources_accelerator_type']}}\", \"accelerator_count\": {{$.inputs.parameters['dedicated_resources_accelerator_count']}}}, \"min_replica_count\": {{$.inputs.parameters['dedicated_resources_min_replica_count']}}, \"max_replica_count\": {{$.inputs.parameters['dedicated_resources_max_replica_count']}}}, \"automatic_resources\": {\"min_replica_count\": {{$.inputs.parameters['automatic_resources_min_replica_count']}}, \"max_replica_count\": {{$.inputs.parameters['automatic_resources_max_replica_count']}}}, \"service_account\": \"{{$.inputs.parameters['service_account']}}\", \"disable_container_logging\": {{$.inputs.parameters['disable_container_logging']}}, \"enable_access_logging\": {{$.inputs.parameters['enable_access_logging']}}, \"explanation_spec\": {\"parameters\": {{$.inputs.parameters['explanation_parameters']}}, \"metadata\": {{$.inputs.parameters['explanation_metadata']}}}}}",
+              "--project",
+              "",
+              "--location",
+              "",
+              "--gcp_resources",
+              "{{$.outputs.parameters['gcp_resources'].output_file}}"
+            ],
+            "command": [
+              "python3",
+              "-u",
+              "-m",
+              "google_cloud_pipeline_components.container.v1.endpoint.deploy_model.launcher"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        },
+        "exec-preprocess-data": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "preprocess_data"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'bigquery' 'kfp==1.8.16' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef preprocess_data(\n    project: str,\n    region:str,\n    limit:int,\n    in_bq_table_id: str, \n    out_bq_table_id: str,\n) -> NamedTuple(\n    \"Outputs\", [(\"out_bq_table_uri\", str)]\n):\n\n    from google.cloud import bigquery\n    from collections import namedtuple\n\n    bqclient = bigquery.Client(project=project)\n    query = f\"\"\"\n    CREATE OR REPLACE TABLE `{out_bq_table_id}` AS (\n        WITH all_hash_limit AS (\n            SELECT\n                weight_pounds,\n                CAST(is_male AS STRING) AS is_male,\n                mother_age,\n                CASE\n                    WHEN plurality = 1 THEN \"Single(1)\"\n                    WHEN plurality = 2 THEN \"Twins(2)\"\n                    WHEN plurality = 3 THEN \"Triplets(3)\"\n                    WHEN plurality = 4 THEN \"Quadruplets(4)\"\n                    WHEN plurality = 5 THEN \"Quintuplets(5)\"\n                END AS plurality,\n                gestation_weeks,\n                IFNULL(CAST(cigarette_use AS STRING), \"Unknown\") AS cigarette_use,\n                IFNULL(CAST(alcohol_use AS STRING), \"Unknown\") AS alcohol_use,\n                ABS(FARM_FINGERPRINT(\n                    CONCAT(\n                        CAST(year AS STRING),\n                        CAST(month AS STRING),\n                        CAST(COALESCE(wday, 0)  AS STRING),\n                        CAST(IFNULL(state, \"Unknown\") AS STRING),\n                        CAST(IFNULL(mother_birth_state, \"Unknown\")  AS STRING)\n                    )\n                )) AS hash_values\n            FROM\n                `{in_bq_table_id}`\n            LIMIT {limit}\n        )\n        SELECT * EXCEPT(hash_values),\n            CASE \n                WHEN MOD(hash_values,10) < 8 THEN \"TRAIN\" \n                WHEN MOD(hash_values,10) < 9 THEN \"VALIDATE\"\n                ELSE \"TEST\"\n            END AS splits\n        FROM all_hash_limit\n    )\n    \"\"\"\n\n    response = bqclient.query(query)\n    _ = response.result()   \n\n    # return output parameters\n    out_bq_table_uri = f\"bq://{out_bq_table_id}\"\n    outputs = namedtuple(\"Outputs\", [\"out_bq_table_uri\"])\n\n    return outputs(out_bq_table_uri)\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-select-best-model": {
+          "container": {
+            "args": [
+              "--executor_input",
+              "{{$}}",
+              "--function_to_execute",
+              "select_best_model"
+            ],
+            "command": [
+              "sh",
+              "-c",
+              "\nif ! [ -x \"$(command -v pip)\" ]; then\n    python3 -m ensurepip || python3 -m ensurepip --user || apt-get install python3-pip\nfi\n\nPIP_DISABLE_PIP_VERSION_CHECK=1 python3 -m pip install --quiet     --no-warn-script-location 'kfp==1.8.16' && \"$0\" \"$@\"\n",
+              "sh",
+              "-ec",
+              "program_path=$(mktemp -d)\nprintf \"%s\" \"$0\" > \"$program_path/ephemeral_component.py\"\npython3 -m kfp.v2.components.executor_main                         --component_module_path                         \"$program_path/ephemeral_component.py\"                         \"$@\"\n",
+              "\nimport kfp\nfrom kfp.v2 import dsl\nfrom kfp.v2.dsl import *\nfrom typing import *\n\ndef select_best_model(\n    automl_metrics: Input[Metrics],\n    automl_model: Input[Artifact],\n    bqml_metrics: Input[Metrics],\n    bqml_model: Input[Artifact],\n\n    #custom_model_metrics: Input[Metrics],\n    reference_metric_name: str,\n    thresholds_dict: dict,\n    best_model_metrics: Output[Metrics], \n    best_model: Output[Artifact],\n) -> NamedTuple(\n    \"Outputs\",[\n        (\"deploy_decision\", str),\n        (\"best_model_name\", str),\n        (\"best_metric\", float),\n    ],\n):\n    import logging\n    import json\n    from collections import namedtuple\n\n    # In cases where the models use different metrics\n    if reference_metric_name == \"mae\":\n        metric_possible_names = [\"meanAbsoluteError\", \"mean_absolute_error\",\"mae\"]\n    elif reference_metric_name == \"mse\":\n        metric_possible_names = [\"MeanSquaredError\", \"mean_squared_error\", \"mse\"]\n\n    logging.info(f\"automl_metrics.metadata: {automl_metrics.metadata}\")\n    logging.info(f\"bqml_metrics.metadata: {bqml_metrics.metadata}\")\n    #logging.info(f\"custom_model_metrics.metadata: {custom_model_metrics.metadata}\")\n\n    for metric_name in metric_possible_names:     \n        try:\n            automl_metric = automl_metrics.metadata[metric_name]\n            logging.info(f\"automl_metric: {automl_metrics}\")\n        except:\n            logging.info(f\"{metric_name} does not exist in the AutoML Model dictionary\")\n\n        try:\n            bqml_metric = bqml_metrics.metadata[metric_name]\n            logging.info(f\"bqml_metric: {bqml_metric}\")\n        except:\n            logging.info(f\"{metric_name} does not exist in the BQML dictionary\")\n\n        #try:\n        #    custom_model_metric = custom_model_metrics.metadata[metric_name]\n        #    logging.info(f\"custom_model_metric: {custom_model_metric}\")\n        #except:\n        #    logging.info(f\"{metric_name} does not exist in the Custom Model dictionary\")\n\n    # Find the best model (i.e. with the smallest RMSE)\n    if bqml_metric <= automl_metric:\n        best_model_name = \"bqml\"\n        best_model = bqml_model\n        best_metric = bqml_metric\n        best_model_metrics.metadata = bqml_metrics.metadata\n    else:\n        best_model_name = \"automl\"\n        best_model = automl_model\n        best_metric = automl_metric\n        best_model_metrics.metadata = automl_metrics.metadata\n\n    # Determine if the best model meets the threshold\n    if best_metric < thresholds_dict[reference_metric_name]:\n        deploy_decision = \"true\"\n    else:\n        deploy_decision = \"false\"\n\n    logging.info(f\"Which model is best? {best_model_name}\")\n    logging.info(f\"What metric is being used? {reference_metric_name}\")\n    logging.info(f\"What is the best metric? {best_metric}\")\n    logging.info(f\"What is the threshold to deploy? {thresholds_dict}\")\n    logging.info(f\"Deploy decision: {deploy_decision}\")\n\n    outputs = namedtuple(\n        \"Outputs\", [\"deploy_decision\", \"best_model_name\", \"best_metric\",]\n    )\n\n    return outputs(deploy_decision, best_model_name, best_metric)\n\n"
+            ],
+            "image": "python:3.9"
+          }
+        },
+        "exec-tabular-dataset-create": {
+          "container": {
+            "args": [
+              "--method.project",
+              "{{$.inputs.parameters['project']}}",
+              "--method.location",
+              "{{$.inputs.parameters['location']}}",
+              "--method.display_name",
+              "{{$.inputs.parameters['display_name']}}",
+              "--method.bq_source",
+              "{{$.inputs.parameters['bq_source']}}",
+              "--method.labels",
+              "{{$.inputs.parameters['labels']}}",
+              "--executor_input",
+              "{{$}}",
+              "--resource_name_output_artifact_uri",
+              "{{$.outputs.artifacts['dataset'].uri}}"
+            ],
+            "command": [
+              "python3",
+              "-m",
+              "google_cloud_pipeline_components.container.aiplatform.remote_runner",
+              "--cls_name",
+              "TabularDataset",
+              "--method_name",
+              "create"
+            ],
+            "image": "gcr.io/ml-pipeline/google-cloud-pipeline-components:1.0.27"
+          }
+        }
+      }
+    },
+    "pipelineInfo": {
+      "name": "bw-prediction"
+    },
+    "root": {
+      "dag": {
+        "outputs": {
+          "artifacts": {
+            "collect-eval-metrics-automl-metrics": {
+              "artifactSelectors": [
+                {
+                  "outputArtifactKey": "metrics",
+                  "producerSubtask": "collect-eval-metrics-automl"
+                }
+              ]
+            },
+            "collect-eval-metrics-bqml-metrics": {
+              "artifactSelectors": [
+                {
+                  "outputArtifactKey": "metrics",
+                  "producerSubtask": "collect-eval-metrics-bqml"
+                }
+              ]
+            },
+            "select-best-model-best_model_metrics": {
+              "artifactSelectors": [
+                {
+                  "outputArtifactKey": "best_model_metrics",
+                  "producerSubtask": "select-best-model"
+                }
+              ]
+            }
+          }
+        },
+        "tasks": {
+          "automl-tabular-training-job": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-automl-tabular-training-job"
+            },
+            "dependentTasks": [
+              "tabular-dataset-create"
+            ],
+            "inputs": {
+              "artifacts": {
+                "dataset": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "dataset",
+                    "producerTask": "tabular-dataset-create"
+                  }
+                }
+              },
+              "parameters": {
+                "budget_milli_node_hours": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "intValue": "3000"
+                    }
+                  }
+                },
+                "column_specs": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{\"is_male\": \"categorical\", \"mother_age\": \"numeric\", \"plurality\": \"categorical\", \"gestation_weeks\": \"numeric\", \"cigarette_use\": \"categorical\", \"alcohol_use\": \"categorical\"}"
+                    }
+                  }
+                },
+                "disable_early_stopping": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "intValue": "0"
+                    }
+                  }
+                },
+                "display_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "automl_bw-prediction_TrainingJob"
+                    }
+                  }
+                },
+                "export_evaluated_data_items": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "intValue": "0"
+                    }
+                  }
+                },
+                "labels": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "us-central1"
+                    }
+                  }
+                },
+                "model_display_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "automl_bw-prediction"
+                    }
+                  }
+                },
+                "optimization_objective": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "minimize-rmse"
+                    }
+                  }
+                },
+                "optimization_prediction_type": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "regression"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                },
+                "target_column": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "weight_pounds"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_automl_model"
+            }
+          },
+          "bigquery-create-model-job": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-bigquery-create-model-job"
+            },
+            "dependentTasks": [
+              "preprocess-data"
+            ],
+            "inputs": {
+              "parameters": {
+                "job_configuration_query": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "labels": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "US"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                },
+                "query": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "\n    CREATE MODEL IF NOT EXISTS `babyweight-prediction.bw_dataset.bqml_v2_bw-prediction`\n    OPTIONS(\n        model_type = 'DNN_LINEAR_COMBINED_REGRESSOR',\n        model_registry = 'vertex_ai', \n        vertex_ai_model_version_aliases = ['bqml_v2_bw-prediction'],\n        input_label_cols = ['weight_pounds'],\n        data_split_col = 'custom_splits',\n        data_split_method = 'CUSTOM',\n        HIDDEN_UNITS = [256, 128, 64],\n        OPTIMIZER = 'adagrad',\n        BATCH_SIZE = HPARAM_CANDIDATES([16, 32, 64]),\n        DROPOUT =  HPARAM_CANDIDATES([0, 0.1, 0.2]),\n        MAX_ITERATIONS = 5,\n        MAX_PARALLEL_TRIALS = 4,\n        NUM_TRIALS = 24\n        ) AS\n    SELECT * EXCEPT(splits),\n        CASE\n            WHEN splits = 'VALIDATE' THEN 'EVAL'\n            ELSE splits\n        END AS custom_splits\n    FROM `babyweight-prediction.bw_dataset.bw-prediction_extracted_2003_limit_500000`\n    "
+                    }
+                  }
+                },
+                "query_parameters": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "[]"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_bqml_model"
+            }
+          },
+          "bigquery-evaluate-model-job": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-bigquery-evaluate-model-job"
+            },
+            "dependentTasks": [
+              "bigquery-create-model-job"
+            ],
+            "inputs": {
+              "artifacts": {
+                "model": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "model",
+                    "producerTask": "bigquery-create-model-job"
+                  }
+                }
+              },
+              "parameters": {
+                "job_configuration_query": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "labels": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "[]"
+                    }
+                  }
+                },
+                "location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "US"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                },
+                "query_parameters": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "[]"
+                    }
+                  }
+                },
+                "query_statement": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": ""
+                    }
+                  }
+                },
+                "table_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": ""
+                    }
+                  }
+                },
+                "threshold": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "doubleValue": -1.0
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "evaluate_bqml_model"
+            }
+          },
+          "collect-eval-metrics-automl": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-collect-eval-metrics-automl"
+            },
+            "dependentTasks": [
+              "automl-tabular-training-job"
+            ],
+            "inputs": {
+              "artifacts": {
+                "model": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "model",
+                    "producerTask": "automl-tabular-training-job"
+                  }
+                }
+              },
+              "parameters": {
+                "region": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "us-central1"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "collect-eval-metrics-automl"
+            }
+          },
+          "collect-eval-metrics-bqml": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-collect-eval-metrics-bqml"
+            },
+            "dependentTasks": [
+              "bigquery-evaluate-model-job"
+            ],
+            "inputs": {
+              "artifacts": {
+                "eval_metrics_artifact": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "evaluation_metrics",
+                    "producerTask": "bigquery-evaluate-model-job"
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "collect-eval-metrics-bqml"
+            }
+          },
+          "condition-deploy-decision-1": {
+            "componentRef": {
+              "name": "comp-condition-deploy-decision-1"
+            },
+            "dependentTasks": [
+              "automl-tabular-training-job",
+              "endpoint-create",
+              "select-best-model"
+            ],
+            "inputs": {
+              "artifacts": {
+                "pipelineparam--automl-tabular-training-job-model": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "model",
+                    "producerTask": "automl-tabular-training-job"
+                  }
+                },
+                "pipelineparam--endpoint-create-endpoint": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "endpoint",
+                    "producerTask": "endpoint-create"
+                  }
+                }
+              },
+              "parameters": {
+                "pipelineparam--select-best-model-best_model_name": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "best_model_name",
+                    "producerTask": "select-best-model"
+                  }
+                },
+                "pipelineparam--select-best-model-deploy_decision": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "deploy_decision",
+                    "producerTask": "select-best-model"
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "condition-deploy-decision-1"
+            },
+            "triggerPolicy": {
+              "condition": "inputs.parameters['pipelineparam--select-best-model-deploy_decision'].string_value == 'true'"
+            }
+          },
+          "endpoint-create": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-endpoint-create"
+            },
+            "inputs": {
+              "parameters": {
+                "description": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": ""
+                    }
+                  }
+                },
+                "display_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "bw-prediction_endpoint"
+                    }
+                  }
+                },
+                "encryption_spec_key_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": ""
+                    }
+                  }
+                },
+                "labels": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "us-central1"
+                    }
+                  }
+                },
+                "network": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": ""
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_endpoint"
+            }
+          },
+          "extract-source-data": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-extract-source-data"
+            },
+            "inputs": {
+              "parameters": {
+                "in_bq_table_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "bigquery-public-data.samples.natality"
+                    }
+                  }
+                },
+                "out_bq_table_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "babyweight-prediction.bw_dataset.bw-prediction_extracted_2003"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                },
+                "region": {
+                  "componentInputParameter": "region"
+                },
+                "year": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "intValue": "2003"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_extracted_table"
+            }
+          },
+          "preprocess-data": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-preprocess-data"
+            },
+            "dependentTasks": [
+              "extract-source-data"
+            ],
+            "inputs": {
+              "parameters": {
+                "in_bq_table_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "babyweight-prediction.bw_dataset.bw-prediction_extracted_2003"
+                    }
+                  }
+                },
+                "limit": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "intValue": "500000"
+                    }
+                  }
+                },
+                "out_bq_table_id": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "babyweight-prediction.bw_dataset.bw-prediction_extracted_2003_limit_500000"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                },
+                "region": {
+                  "componentInputParameter": "region"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_prepped_table"
+            }
+          },
+          "select-best-model": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-select-best-model"
+            },
+            "dependentTasks": [
+              "automl-tabular-training-job",
+              "bigquery-create-model-job",
+              "collect-eval-metrics-automl",
+              "collect-eval-metrics-bqml"
+            ],
+            "inputs": {
+              "artifacts": {
+                "automl_metrics": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "metrics",
+                    "producerTask": "collect-eval-metrics-automl"
+                  }
+                },
+                "automl_model": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "model",
+                    "producerTask": "automl-tabular-training-job"
+                  }
+                },
+                "bqml_metrics": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "metrics",
+                    "producerTask": "collect-eval-metrics-bqml"
+                  }
+                },
+                "bqml_model": {
+                  "taskOutputArtifact": {
+                    "outputArtifactKey": "model",
+                    "producerTask": "bigquery-create-model-job"
+                  }
+                }
+              },
+              "parameters": {
+                "reference_metric_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "mae"
+                    }
+                  }
+                },
+                "thresholds_dict": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{\"mae\": 50.0}"
+                    }
+                  }
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "select-best-model"
+            }
+          },
+          "tabular-dataset-create": {
+            "cachingOptions": {
+              "enableCache": true
+            },
+            "componentRef": {
+              "name": "comp-tabular-dataset-create"
+            },
+            "dependentTasks": [
+              "preprocess-data"
+            ],
+            "inputs": {
+              "parameters": {
+                "bq_source": {
+                  "taskOutputParameter": {
+                    "outputParameterKey": "out_bq_table_uri",
+                    "producerTask": "preprocess-data"
+                  }
+                },
+                "display_name": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "bw-prediction_extracted_2003_limit_500000_dataset"
+                    }
+                  }
+                },
+                "labels": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "{}"
+                    }
+                  }
+                },
+                "location": {
+                  "runtimeValue": {
+                    "constantValue": {
+                      "stringValue": "us-central1"
+                    }
+                  }
+                },
+                "project": {
+                  "componentInputParameter": "project"
+                }
+              }
+            },
+            "taskInfo": {
+              "name": "create_vertex_dataset"
+            }
+          }
+        }
+      },
+      "inputDefinitions": {
+        "parameters": {
+          "project": {
+            "type": "STRING"
+          },
+          "region": {
+            "type": "STRING"
+          },
+          "service_account": {
+            "type": "STRING"
+          }
+        }
+      },
+      "outputDefinitions": {
+        "artifacts": {
+          "collect-eval-metrics-automl-metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "collect-eval-metrics-bqml-metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            }
+          },
+          "select-best-model-best_model_metrics": {
+            "artifactType": {
+              "schemaTitle": "system.Metrics",
+              "schemaVersion": "0.0.1"
+            }
+          }
+        }
+      }
+    },
+    "schemaVersion": "2.0.0",
+    "sdkVersion": "kfp-1.8.16"
+  },
+  "runtimeConfig": {
+    "gcsOutputDirectory": "gs://b_w_bucket/bw-prediction",
+    "parameters": {
+      "project": {
+        "stringValue": "babyweight-prediction"
+      },
+      "region": {
+        "stringValue": "us-west1"
+      },
+      "service_account": {
+        "stringValue": "69318036822-compute@developer.gserviceaccount.com"
+      }
+    }
+  }
+}
