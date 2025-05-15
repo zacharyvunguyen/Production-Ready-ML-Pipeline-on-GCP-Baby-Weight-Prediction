@@ -11,6 +11,15 @@ The solution addresses critical challenges in healthcare prediction by leveragin
 - **Interactive Predictions**: A modern Streamlit web application with real-time feedback
 - **End-to-End Automation**: Complete CI/CD pipeline for reliable deployments
 
+## Live Application
+
+The application is deployed and accessible at the following URLs:
+
+- **Development Environment**: [https://baby-weight-predictor-dev-526740145114.us-central1.run.app/](https://baby-weight-predictor-dev-526740145114.us-central1.run.app/)
+- **Production Environment**: [https://baby-weight-predictor-526740145114.us-central1.run.app/](https://baby-weight-predictor-526740145114.us-central1.run.app/)
+
+These URLs remain constant even as new versions are deployed through the CI/CD pipeline.
+
 ## Interactive Prediction Application
 ![Baby Weight Prediction App Demo](img/streamlit_baby_25.gif)
 
