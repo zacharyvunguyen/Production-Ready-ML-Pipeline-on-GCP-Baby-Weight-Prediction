@@ -25,7 +25,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 # --- Page Configuration ---
 st.set_page_config(
-    page_title="👶 Baby Weight Predictor",
+    page_title="👶 Baby Weight Predictor (CI/CD Enabled)",
     page_icon="👶",
     layout="wide",
     initial_sidebar_state="expanded",
@@ -752,7 +752,7 @@ def main():
     # Add footer with version info
     st.markdown("""
     <div class="footer">
-        Version 2.0 | Developed with ❤️ using Streamlit and Vertex AI | © 2024
+        Version 2.0 | Developed with ❤️ using Streamlit and Vertex AI by Zachary Nguyen | © 2025
     </div>
     """, unsafe_allow_html=True)
 
