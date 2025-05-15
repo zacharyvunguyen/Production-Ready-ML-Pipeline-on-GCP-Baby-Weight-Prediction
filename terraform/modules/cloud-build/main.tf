@@ -23,7 +23,7 @@ resource "google_artifact_registry_repository" "app_repo" {
     id     = "delete-old-versions"
     action = "DELETE"
     condition {
-      older_than = "30d"
+      older_than = "2592000s" # 30 days in seconds
       tag_state  = "ANY"
     }
   }

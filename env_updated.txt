@@ -1,0 +1,57 @@
+# GCP Configuration
+PROJECT=baby-mlops
+REGION=us-central1
+BUCKET=baby-mlops-pipeline-bucket
+SERVICE_ACCOUNT=baby-mlops-pipeline-runner@baby-mlops.iam.gserviceaccount.com
+BQ_LOCATION=US
+
+# Pipeline Configuration
+APPNAME=babyweight-pipeline-2025-py
+PIPELINE_ROOT=gs://baby-mlops-pipeline-bucket/pipeline_root/babyweight-pipeline-2025-py
+ENABLE_CACHING=true
+
+# Data Configuration
+SOURCE_BQ_TABLE=bigquery-public-data.samples.natality
+BQ_DATASET_STAGING=baby_mlops_data_staging
+EXTRACTED_DATA_TABLE_NAME=natality_source_extract
+PREPPED_DATA_TABLE_NAME=natality_features_prepped
+DATA_EXTRACTION_YEAR=2003
+DATA_PREPROCESSING_LIMIT=50000
+
+# BQML Configuration
+BQML_MODEL_NAME=my_babyweight_model
+BQML_MODEL_VERSION_ALIASES=v1
+VAR_TARGET=weight_pounds
+
+# AutoML Configuration
+VERTEX_DATASET_DISPLAY_NAME=baby_mlops_vertex_dataset
+AUTOML_MODEL_DISPLAY_NAME=baby_mlops_automl_model
+AUTOML_BUDGET_MILLI_NODE_HOURS=1000
+
+# Model Selection Configuration
+COMPARISON_METRIC=mean_absolute_error
+MODEL_THRESHOLDS_JSON={"mean_absolute_error":0.9}
+
+# Deployment Configuration
+ENDPOINT_DISPLAY_NAME=baby-mlops-pipeline-endpoint
+DEPLOY_MACHINE_TYPE=n1-standard-2
+DEPLOY_MIN_REPLICA_COUNT=1
+DEPLOY_MAX_REPLICA_COUNT=1 
+
+# CI/CD Configuration
+# Artifact Registry Configuration
+REPOSITORY=babyweight-pipeline-2025-py-repo-dev
+IMAGE_NAME=baby-weight-predictor
+TAG=v1
+
+# Cloud Run Configuration
+SERVICE_NAME=baby-weight-predictor
+MIN_INSTANCES=0
+MAX_INSTANCES=2
+CPU=1
+MEMORY=512Mi
+
+# Application Configuration
+STREAMLIT_SERVER_PORT=8080
+STREAMLIT_SERVER_HEADLESS=true
+STREAMLIT_SERVER_ADDRESS=0.0.0.0 
