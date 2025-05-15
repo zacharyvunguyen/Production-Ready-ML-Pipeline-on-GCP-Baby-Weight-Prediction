@@ -1,1 +1,46 @@
-.env 
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Terraform
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.terraform.lock.hcl
+
+# Compiled pipeline specs
+compiled_pipeline_specs/
+
+# GCP credentials
+key/
+*.json
+!package.json
+
+# Environment variables
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local 

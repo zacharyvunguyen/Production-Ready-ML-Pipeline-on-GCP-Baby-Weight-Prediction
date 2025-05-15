@@ -1,1 +1,0 @@
-{"Modules":[{"Key":"","Source":"","Dir":"."},{"Key":"environment","Source":"./environments/dev","Dir":"environments/dev"},{"Key":"environment.cloud_build","Source":"../../modules/cloud-build","Dir":"modules/cloud-build"},{"Key":"environment.cloud_run","Source":"../../modules/cloud-run","Dir":"modules/cloud-run"},{"Key":"iam","Source":"./modules/iam","Dir":"modules/iam"}]}
