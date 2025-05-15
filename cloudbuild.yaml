@@ -29,7 +29,9 @@ steps:
       '${_REGION}',
       '--platform',
       'managed',
-      '--allow-unauthenticated'
+      '--allow-unauthenticated',
+      '--set-env-vars',
+      'ENV=production,PROJECT=${PROJECT_ID},REGION=${_REGION}'
     ]
 
 # Store images in Artifact Registry

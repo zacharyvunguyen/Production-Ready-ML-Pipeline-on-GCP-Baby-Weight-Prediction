@@ -422,7 +422,8 @@ def main():
         st.title("👶 Baby Weight Predictor")
         st.markdown("""
         This app uses machine learning models deployed on GCP Vertex AI to predict a baby's weight
-        based on various maternal and pregnancy factors.
+        based on various maternal and pregnancy factors. The application is built with a full CI/CD
+        pipeline using Terraform, Cloud Build, and Cloud Run for automated deployments.
         """)
     
     # Check environment variables before proceeding
