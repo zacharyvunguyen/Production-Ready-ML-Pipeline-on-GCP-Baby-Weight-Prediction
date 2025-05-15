@@ -554,6 +554,24 @@ def main():
         - BigQuery ML
         """)
     
+    # Add CI/CD explanation
+    with st.sidebar.expander("🚀 CI/CD Pipeline"):
+        st.markdown("""
+        **CI/CD Implementation:**
+        - **Infrastructure as Code**: Terraform manages all GCP resources
+        - **Containerization**: Docker images stored in Artifact Registry
+        - **Continuous Integration**: Automated builds via Cloud Build
+        - **Continuous Deployment**: Automated deployments to Cloud Run
+        - **Environment Separation**: Development and production pipelines
+        
+        **Deployment Flow:**
+        1. Code changes pushed to GitHub repository
+        2. Cloud Build trigger detects changes
+        3. Docker image built and pushed to Artifact Registry
+        4. New version deployed to Cloud Run
+        5. Zero-downtime deployment with traffic management
+        """)
+    
     # Input form with modern styled columns
     with st.form(key="prediction_form", border=True):
         st.subheader("📋 Enter Patient Information")
