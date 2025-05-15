@@ -26,6 +26,7 @@ The project includes a fully automated CI/CD pipeline using:
 - **Continuous Integration**: Cloud Build triggers for automated builds
 - **Continuous Deployment**: Automated deployment to Cloud Run
 - **Environment Separation**: Separate pipelines for development and production
+- **IAM Security**: Proper service account permissions for secure deployments
 
 The CI/CD workflow automatically builds and deploys the Streamlit application when changes are pushed to the repository, ensuring consistent and reliable deployments.
 
