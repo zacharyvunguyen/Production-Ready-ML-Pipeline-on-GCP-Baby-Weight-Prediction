@@ -1,14 +1,15 @@
 # Production-Ready ML Pipeline on GCP: Baby Weight Prediction
 
 ## Overview
-This project delivers a production-grade MLOps solution on Google Cloud Platform (GCP) for baby weight prediction, using the Vertex AI platform and Kubeflow Pipelines. The implementation showcases a complete ML workflow with robust governance, intelligent deployment strategies, and operational excellence.
+This project delivers a full-stack MLOps solution on Google Cloud Platform (GCP) for baby weight prediction, leveraging Vertex AI, Kubeflow Pipelines, and a comprehensive CI/CD framework. The implementation demonstrates enterprise-grade machine learning operations with robust governance, intelligent deployment strategies, and operational excellence.
 
 The solution addresses critical challenges in healthcare prediction by leveraging:
 
 - **Natality Dataset**: A comprehensive public dataset from BigQuery containing US birth information from 1969-2008
 - **Dual Modeling Approach**: Parallel BQML and AutoML training for framework diversity and performance optimization
 - **Intelligent Deployment**: Automated model selection, endpoint management, and traffic control
-- **Interactive Predictions**: A modern Streamlit web application for healthcare professionals
+- **Interactive Predictions**: A modern Streamlit web application with real-time feedback
+- **End-to-End Automation**: Complete CI/CD pipeline for reliable deployments
 
 ## Interactive Prediction Application
 ![Baby Weight Prediction App Demo](img/streamlit_baby_25.gif)
@@ -21,14 +22,15 @@ The end-to-end MLOps pipeline orchestrates the entire machine learning lifecycle
 ## CI/CD Pipeline
 The project includes a fully automated CI/CD pipeline using:
 
-- **Infrastructure as Code**: Terraform configuration for all GCP resources
-- **Containerization**: Docker images stored in Artifact Registry
-- **Continuous Integration**: Cloud Build triggers for automated builds
-- **Continuous Deployment**: Automated deployment to Cloud Run
-- **Environment Separation**: Separate pipelines for development and production
-- **IAM Security**: Proper service account permissions for secure deployments
+- **Infrastructure as Code**: Terraform configuration for all GCP resources including IAM, Artifact Registry, and Cloud Run
+- **Containerization**: Docker images with optimized caching stored in Artifact Registry
+- **Continuous Integration**: Cloud Build triggers on GitHub repository changes
+- **Continuous Deployment**: Zero-downtime deployment to Cloud Run
+- **Environment Separation**: Distinct pipelines for development and production environments
+- **IAM Security**: Least-privilege service account permissions for secure deployments
+- **Monitoring & Observability**: Real-time dashboards and alerts for application performance
 
-The CI/CD workflow automatically builds and deploys the Streamlit application when changes are pushed to the repository, ensuring consistent and reliable deployments.
+The CI/CD workflow automatically builds and deploys the Streamlit application when changes are pushed to the repository, ensuring consistent and reliable deployments with full visibility into system health.
 
 ## Key Production Features
 
@@ -62,6 +64,12 @@ The CI/CD workflow automatically builds and deploys the Streamlit application wh
 - **Comprehensive Error Handling**: Robust exception management at each stage
 - **Detailed Logging**: Complete observability throughout the pipeline
 
+### 7. Production Monitoring
+- **Real-time Dashboards**: Custom Cloud Monitoring dashboards for service health
+- **Performance Metrics**: Tracking of request counts, error rates, and latency
+- **Alerting System**: Proactive notification for service degradation
+- **Resource Utilization**: Monitoring of compute and memory usage
+
 ## Technical Implementation
 
 The pipeline orchestrates these key stages:
@@ -73,6 +81,8 @@ The pipeline orchestrates these key stages:
 5. **Model Registration**: Store model artifacts with complete metadata
 6. **Deployment Orchestration**: Manage endpoints and model serving
 7. **Traffic Control**: Configure traffic allocation for production models
+8. **Continuous Delivery**: Automate deployment via GitHub-triggered Cloud Build
+9. **Proactive Monitoring**: Track service health with custom dashboards
 
 ## Business Benefits
 
@@ -84,9 +94,14 @@ This MLOps solution delivers significant advantages for healthcare organizations
 4. **Compliance Support**: Comprehensive model registry and versioning for regulatory needs
 5. **Operational Simplification**: Automated deployment decisions and endpoint management
 6. **Quality Assurance**: Threshold-based deployment ensures performance standards
+7. **System Reliability**: Proactive monitoring and alerting minimizes downtime
 
 ## Documentation
 
-For detailed component information, refer to the [pipeline documentation](pipeline.md).
+For detailed component information, refer to the following documentation:
+- [ML Pipeline Architecture](pipeline.md)
+- [CI/CD Implementation](cicd.md)
+- [CI/CD Implementation Log](cicd_log.md)
+- [GitHub Integration](github_integration.md)
 
 

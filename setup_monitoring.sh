@@ -17,12 +17,12 @@ echo "Setting up monitoring for Cloud Run service: ${SERVICE_NAME}"
 
 # Create uptime check for the Cloud Run service
 echo "Creating uptime check..."
-gcloud monitoring uptime-check create http \
+gcloud monitoring uptime create http \
     --display-name="${SERVICE_NAME}-uptime" \
     --uri="https://${SERVICE_NAME}-e6n3dplaoq-uc.a.run.app" \
     --path="/" \
-    --check-interval=60s \
-    --timeout=10s \
+    --period=60 \
+    --timeout=10 \
     --project=${PROJECT_ID}
 
 # Create alert policy for error rate
@@ -55,9 +55,8 @@ cat << EOF > error_rate_policy.json
 }
 EOF
 
-gcloud monitoring alerts create \
+gcloud alpha monitoring policies create \
     --project=${PROJECT_ID} \
-    --notification-channels=${NOTIFICATION_CHANNELS} \
     --policy-from-file=error_rate_policy.json
 
 # Create alert policy for latency
@@ -90,9 +89,8 @@ cat << EOF > latency_policy.json
 }
 EOF
 
-gcloud monitoring alerts create \
+gcloud alpha monitoring policies create \
     --project=${PROJECT_ID} \
-    --notification-channels=${NOTIFICATION_CHANNELS} \
     --policy-from-file=latency_policy.json
 
 # Clean up temporary files
